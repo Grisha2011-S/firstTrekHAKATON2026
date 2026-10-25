@@ -4,169 +4,144 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&family=Unbounded:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=PT+Mono&family=PT+Sans+Narrow:wght@700&family=PT+Sans:ital,wght@0,400;0,700;1,400&family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap">
 <style>
-/* Layout: full-bleed WebGL hall you walk through; HUD pinned to the corners; exhibit cards slide in from the right (bottom sheet on phones). Single dark look on purpose: it is a museum in space. */
+/* Layout: the 3D hall fills the screen; everything on top of it is printed museum signage —
+   paper labels with black type, hall numbers in flat colour blocks, sharp corners, no glow.
+   Single look on purpose: dark hall, paper labels. */
 :root{
-  --void:#05070c;
-  --panel:rgba(11,14,22,.9);
-  --panel-solid:#0e121c;
-  --line:#273049;
-  --fg:#ece8dd;
-  --fg-soft:#d6d2c7;
-  --muted:#9aa2b4;
-  --foil:#e2ae4a;
-  --moon:#d2cbbb;
-  --mars:#e57c4f;
-  --deep:#8fb2ff;
-  --ok:#72d39c;
-  --silent:#8d9abb;
-  --hover:#161c2b;
-  --tick:#222a3d;
-  --f-display:"Unbounded","Arial Black",system-ui,sans-serif;
-  --f-body:"Golos Text",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
-  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+  --hall:#0c0d0f;
+  --paper:#f1f0eb;
+  --paper-2:#e4e2db;
+  --ink:#121212;
+  --gray:#66655f;
+  --rule:#121212;
+  --moon:#8f8e86;
+  --mars:#b4441c;
+  --deep:#2451c6;
+  --st-active:#1c7a3d;
+  --st-done:#8a5a00;
+  --st-silent:#525d78;
+  --f-narrow:"PT Sans Narrow","Arial Narrow",Arial,sans-serif;
+  --f-sans:"PT Sans",Arial,"Helvetica Neue",sans-serif;
+  --f-serif:"PT Serif",Georgia,"Times New Roman",serif;
+  --f-mono:"PT Mono",Consolas,"Courier New",monospace;
   color-scheme:dark;
 }
 [hidden]{display:none!important}
-html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;background:var(--void);color:var(--fg);font-family:var(--f-body)}
-#app{position:fixed;inset:0;overflow:hidden;background:var(--void)}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;background:var(--hall);color:var(--ink);font-family:var(--f-sans)}
+#app{position:fixed;inset:0;overflow:hidden;background:var(--hall)}
 #c{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
 #c.dragging{cursor:grabbing}
 #c.hovering{cursor:pointer}
 button{font:inherit;color:inherit}
-button:focus-visible{outline:2px solid var(--foil);outline-offset:2px}
-kbd{display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:#141a28;color:var(--fg)}
+button:focus-visible{outline:3px solid #ffcc00;outline-offset:2px}
+kbd{display:inline-block;min-width:1.5em;text-align:center;font:12px/1 var(--f-mono);padding:3px 5px;border:1px solid var(--ink);border-radius:2px;background:#fff;color:var(--ink)}
 
 .hud{position:absolute;z-index:5;pointer-events:none}
 .hud>*{pointer-events:auto}
-.top{top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;
-  padding-top:calc(14px + env(safe-area-inset-top,0px));
+.top{top:0;left:0;right:0;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;
+  padding-top:calc(12px + env(safe-area-inset-top,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.brand{pointer-events:none;min-width:0}
-.eyebrow{font:600 11px/1.2 var(--f-mono);letter-spacing:.14em;text-transform:uppercase}
-.brand .eyebrow{color:var(--foil)}
-.brand h1{margin:6px 0 0;font:700 clamp(14px,2vw,19px)/1.15 var(--f-display);text-shadow:0 1px 14px #000}
-.zone-chip{display:flex;align-items:center;gap:8px;padding:8px 12px;border:1px solid var(--line);background:var(--panel);border-radius:999px;font:500 13px var(--f-body);white-space:nowrap;pointer-events:none}
-.zone-chip i{width:8px;height:8px;border-radius:50%;background:var(--zc,var(--muted));box-shadow:0 0 10px var(--zc,transparent)}
-.zone-chip span{color:var(--muted)}
+.brand{pointer-events:none;background:var(--paper);padding:7px 10px 6px;min-width:0}
+.brand h1{margin:0;font:700 17px/1 var(--f-narrow);text-transform:uppercase;letter-spacing:.02em}
+.brand small{display:block;margin-top:3px;font:12px/1.2 var(--f-sans);color:var(--gray)}
+.hall-tag{display:flex;align-items:stretch;pointer-events:none;background:var(--paper);white-space:nowrap}
+.hall-tag b{display:flex;align-items:center;justify-content:center;min-width:34px;padding:0 8px;background:var(--hc,var(--ink));color:#fff;font:700 22px/1 var(--f-narrow)}
+.hall-tag span{display:flex;flex-direction:column;justify-content:center;padding:5px 10px;font:700 15px/1.05 var(--f-narrow);text-transform:uppercase}
+.hall-tag em{font:italic 12px/1.2 var(--f-serif);text-transform:none;color:var(--gray)}
 
-.bottom{left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap;
-  padding-bottom:calc(14px + env(safe-area-inset-bottom,0px));
+.bottom{left:0;right:0;bottom:0;display:flex;justify-content:flex-end;align-items:flex-end;gap:10px;flex-wrap:wrap;
+  padding-bottom:calc(12px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.passport{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 12px;min-width:0}
-.passport .lbl{font:600 10px/1.2 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);display:flex;justify-content:space-between;gap:16px}
-.passport .lbl b{color:var(--fg);font-variant-numeric:tabular-nums}
-.ticks{display:flex;gap:3px;margin-top:8px}
-.ticks span{width:13px;height:6px;border-radius:1px;background:var(--tick);transition:background .3s}
-.ticks span.on{background:var(--tc)}
-.actions{display:flex;gap:8px}
-.btn{font:500 14px var(--f-body);color:var(--fg);background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:10px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
-.btn:hover{border-color:#41507a;background:var(--hover)}
-.btn.primary{background:var(--foil);color:#1a1205;border-color:var(--foil);font-weight:600}
-.btn.primary:hover{background:#f0c066}
+.actions{display:flex;gap:6px}
+.btn{font:700 15px/1 var(--f-sans);color:var(--ink);background:var(--paper);border:0;border-radius:2px;padding:11px 14px;cursor:pointer;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{background:#fff}
+.btn.dark{background:var(--ink);color:var(--paper)}
+.btn.dark:hover{background:#000}
+.btn.icon{width:42px;justify-content:center;padding-left:0;padding-right:0;font-size:20px}
 
-.cross{position:absolute;left:50%;top:50%;width:6px;height:6px;margin:-3px 0 0 -3px;border-radius:50%;background:rgba(255,255,255,.5);box-shadow:0 0 0 1px rgba(0,0,0,.4);pointer-events:none;z-index:4}
-.prompt{position:absolute;left:50%;bottom:calc(98px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:10px 16px 10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:999px;cursor:pointer;font:500 14px var(--f-body);color:var(--fg)}
-.prompt:hover{border-color:#41507a}
-.prompt i{width:9px;height:9px;border-radius:50%;background:var(--pc,var(--foil));flex:none;box-shadow:0 0 10px var(--pc,var(--foil))}
-.prompt .nm{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
-.prompt .hint{color:var(--muted);white-space:nowrap}
+.cross{position:absolute;left:50%;top:50%;width:10px;height:10px;margin:-5px 0 0 -5px;pointer-events:none;z-index:4;
+  background:linear-gradient(#fff,#fff) center/10px 1px no-repeat,linear-gradient(#fff,#fff) center/1px 10px no-repeat;opacity:.7}
+.prompt{position:absolute;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:6;display:flex;align-items:center;gap:10px;max-width:calc(100% - 32px);padding:9px 12px;background:var(--paper);border:0;border-radius:2px;cursor:pointer;font:15px/1.2 var(--f-sans);color:var(--ink)}
+.prompt i{align-self:stretch;width:6px;background:var(--pc,var(--ink));flex:none}
+.prompt .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.prompt .hint{color:var(--gray);white-space:nowrap}
 
-.sheet{position:absolute;z-index:8;top:calc(70px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));
-  width:min(440px,calc(100% - 32px));background:var(--panel-solid);border:1px solid var(--line);border-radius:8px;overflow:auto;overscroll-behavior:contain;box-shadow:0 24px 70px rgba(0,0,0,.65)}
-.sheet-inner{padding:20px 22px 24px;display:flex;flex-direction:column;gap:14px}
-.sheet .head{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.x{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;font-size:20px;line-height:1;cursor:pointer;flex:none}
-.x:hover{background:var(--hover)}
-.sheet h2{margin:0;font:700 24px/1.15 var(--f-display);text-wrap:balance}
-.sheet .en{margin:-8px 0 0;color:var(--muted);font:400 12.5px/1.4 var(--f-mono)}
-.status{align-self:flex-start;display:inline-flex;align-items:center;gap:8px;padding:5px 11px;border-radius:999px;font:600 12.5px var(--f-body);border:1px solid currentColor}
-.status::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
-.st-active{color:var(--ok)}
-.st-done{color:var(--foil)}
-.st-silent{color:var(--silent)}
-.facts{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin:0}
-.facts div{background:var(--panel-solid);padding:10px 12px;min-width:0}
-.facts dt{font:600 10px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
-.facts dd{margin:5px 0 0;font:500 14px/1.35 var(--f-body)}
-.story{margin:0;font-size:15.5px;line-height:1.62;color:var(--fg-soft)}
-.sheet h3{margin:4px 0 0;font:600 11px/1.2 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.learned{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:9px}
-.learned li{display:grid;grid-template-columns:16px 1fr;gap:8px;font-size:14.5px;line-height:1.5}
-.learned li::before{content:"";width:7px;height:7px;margin:7px 0 0 2px;border:1.5px solid var(--zc,var(--foil));transform:rotate(45deg)}
-.didyou{background:rgba(226,174,74,.07);border:1px dashed rgba(226,174,74,.45);border-radius:6px;padding:12px 14px}
-.didyou b{font:600 11px/1.2 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--foil)}
-.didyou p{margin:7px 0 0;font-size:14.5px;line-height:1.55}
-.nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.nav button{text-align:left;background:transparent;border:1px solid var(--line);border-radius:6px;padding:9px 11px;cursor:pointer;min-width:0}
-.nav button:hover{background:var(--hover)}
+.sheet{position:absolute;z-index:8;top:calc(64px + env(safe-area-inset-top,0px));right:max(16px,env(safe-area-inset-right,0px));bottom:calc(14px + env(safe-area-inset-bottom,0px));
+  width:min(450px,calc(100% - 32px));background:var(--paper);color:var(--ink);overflow:auto;overscroll-behavior:contain;-webkit-user-select:text;user-select:text}
+.sheet-inner{padding:0 22px 24px;display:flex;flex-direction:column;gap:14px}
+.band{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:0 -22px;padding:0 0 0 22px;background:var(--hc,var(--ink));color:#fff;font:700 15px/1 var(--f-narrow);text-transform:uppercase;letter-spacing:.03em}
+.band .inv{font:13px/1 var(--f-mono);text-transform:none;letter-spacing:0;opacity:.85;margin-left:auto}
+.x{width:44px;height:44px;border:0;background:rgba(0,0,0,.18);color:#fff;font-size:24px;line-height:1;cursor:pointer;flex:none}
+.x:hover{background:rgba(0,0,0,.35)}
+.sheet h2{margin:6px 0 0;font:700 30px/1.02 var(--f-narrow);text-wrap:balance}
+.sheet .en{margin:-8px 0 0;font:italic 15px/1.35 var(--f-serif);color:var(--gray)}
+.status{display:flex;align-items:center;gap:8px;font:700 14px/1.2 var(--f-sans);color:var(--sc)}
+.status::before{content:"";width:10px;height:10px;background:var(--sc);flex:none}
+.facts{margin:0;border-top:2px solid var(--rule)}
+.facts div{display:grid;grid-template-columns:118px 1fr;gap:12px;padding:7px 0;border-bottom:1px solid var(--paper-2)}
+.facts div:last-child{border-bottom:1px solid var(--rule)}
+.facts dt{font:13px/1.4 var(--f-sans);color:var(--gray)}
+.facts dd{margin:0;font:700 14.5px/1.4 var(--f-sans)}
+.story{margin:0;font:16px/1.6 var(--f-serif)}
+.sheet h3{margin:6px 0 -4px;font:700 17px/1.1 var(--f-narrow);text-transform:uppercase;letter-spacing:.02em}
+.learned{margin:0;padding:0 0 0 1.1em;font:15px/1.5 var(--f-sans);list-style:"—  "}
+.learned li+li{margin-top:6px}
+.fact{border:1px solid var(--ink);padding:11px 14px 12px}
+.fact b{font:700 17px/1.1 var(--f-narrow);text-transform:uppercase;letter-spacing:.02em}
+.fact p{margin:6px 0 0;font:italic 15.5px/1.55 var(--f-serif)}
+.nav{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:2px}
+.nav button{text-align:left;background:var(--paper-2);border:0;border-radius:2px;padding:9px 11px;cursor:pointer;min-width:0}
+.nav button:hover{background:#d8d6ce}
 .nav button.next{text-align:right}
-.nav small{display:block;color:var(--muted);font:600 10px/1.2 var(--f-mono);letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
-.nav span{display:block;font:500 13.5px/1.3 var(--f-body);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.note{margin:0;color:var(--muted);font-size:12.5px;line-height:1.5}
+.nav small{display:block;color:var(--gray);font:12px/1.2 var(--f-sans);margin-bottom:3px}
+.nav span{display:block;font:700 14px/1.25 var(--f-sans);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.note{margin:0;color:var(--gray);font:italic 13.5px/1.5 var(--f-serif)}
 
-.cat-zone{display:flex;flex-direction:column;gap:4px}
-.cat-zone h4{margin:6px 0 2px;display:flex;align-items:baseline;justify-content:space-between;gap:10px;font:600 15px var(--f-body)}
-.cat-zone h4 span{font:400 12px var(--f-mono);color:var(--muted)}
-.cat-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:2px}
-.cat-list button{width:100%;display:grid;grid-template-columns:28px 1fr auto;align-items:center;gap:10px;padding:9px 10px;background:transparent;border:0;border-radius:6px;text-align:left;cursor:pointer}
-.cat-list button:hover{background:var(--hover)}
-.num{font:600 12px var(--f-mono);color:var(--muted);font-variant-numeric:tabular-nums}
-.cat-name{font:500 14.5px/1.3 var(--f-body);min-width:0}
-.cat-name small{display:block;font:400 12px var(--f-mono);color:var(--muted);margin-top:2px}
-.seen{font:600 11px var(--f-mono);color:var(--ok);white-space:nowrap}
-.dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:6px;vertical-align:1px;background:currentColor}
+.num{font:13px var(--f-mono);color:var(--gray);font-variant-numeric:tabular-nums}
 
-.intro{position:absolute;inset:0;z-index:10;display:flex;align-items:center;overflow:auto;
-  background:linear-gradient(90deg,rgba(5,7,12,.95) 0%,rgba(5,7,12,.86) 48%,rgba(5,7,12,.35) 100%);
+.intro{position:absolute;inset:0;z-index:10;display:flex;align-items:center;overflow:auto;background:rgba(12,13,15,.55);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:calc(24px + env(safe-area-inset-top,0px)) calc(24px + env(safe-area-inset-bottom,0px))}
-.intro-inner{max-width:580px;display:flex;flex-direction:column;gap:20px;margin-left:clamp(0px,5vw,72px)}
-.intro h2{margin:0;font:700 clamp(30px,5.2vw,56px)/1.04 var(--f-display);text-wrap:balance}
-.intro h2 em{font-style:normal;color:var(--foil)}
-.intro p{margin:0;font-size:17px;line-height:1.6;color:var(--fg-soft);max-width:60ch}
-.halls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.hall{border-top:2px solid var(--zc);padding-top:9px;min-width:0}
-.hall b{display:block;font:600 14.5px/1.3 var(--f-body)}
-.hall span{font:400 12px/1.4 var(--f-mono);color:var(--muted)}
-.controls{display:grid;grid-template-columns:auto 1fr;gap:9px 14px;align-items:center;font-size:14px;color:var(--muted)}
-.controls .k{display:flex;gap:4px;flex-wrap:wrap}
-.intro .go{align-self:flex-start;font-size:16px;padding:13px 22px}
-.intro .err{color:var(--mars)}
+  padding-block:calc(20px + env(safe-area-inset-top,0px)) calc(20px + env(safe-area-inset-bottom,0px))}
+.intro-inner{width:min(620px,100%);background:var(--paper);display:flex;flex-direction:column;gap:16px;padding:0 26px 26px;margin-left:clamp(0px,4vw,60px)}
+.intro .band{margin:0 -26px;padding:12px 26px}
+.intro h2{margin:4px 0 0;font:700 clamp(36px,6vw,58px)/.95 var(--f-narrow);text-transform:uppercase;letter-spacing:.005em}
+.intro .lead{margin:0;font:17px/1.55 var(--f-serif);max-width:58ch}
+.intro .lead + .lead{margin-top:-6px}
+.controls{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:center;font:14.5px/1.35 var(--f-sans);border-top:2px solid var(--rule);padding-top:12px}
+.controls .k{display:flex;gap:3px;flex-wrap:wrap}
+.intro .go{align-self:flex-start;font-size:16px;padding:14px 22px}
+.intro .err{margin:0;color:var(--mars);font-weight:700}
 
-.toast{position:absolute;z-index:9;left:50%;top:calc(76px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:calc(100% - 32px);padding:12px 16px;border-radius:8px;background:var(--panel-solid);border:1px solid var(--foil);font:500 14.5px/1.45 var(--f-body);text-align:center}
-.toast b{color:var(--foil)}
 
-.joy{position:absolute;z-index:6;left:max(22px,calc(env(safe-area-inset-left,0px) + 16px));bottom:calc(110px + env(safe-area-inset-bottom,0px));width:116px;height:116px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,14,22,.45);pointer-events:none;opacity:.5;transition:opacity .15s}
+.joy{position:absolute;z-index:6;left:max(22px,calc(env(safe-area-inset-left,0px) + 16px));bottom:calc(110px + env(safe-area-inset-bottom,0px));width:116px;height:116px;border-radius:50%;border:2px solid rgba(241,240,235,.55);pointer-events:none;opacity:.55;transition:opacity .15s}
 .joy.active{opacity:1}
-.joy::after{content:"Веди пальцем здесь";position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;font:500 12px var(--f-body);color:var(--muted)}
+.joy::after{content:"веди пальцем здесь";position:absolute;left:50%;top:calc(100% + 6px);transform:translateX(-50%);white-space:nowrap;font:italic 13px var(--f-serif);color:var(--paper)}
 .joy.active::after{content:none}
-.btn.icon{width:44px;justify-content:center;padding-left:0;padding-right:0;font-size:22px;line-height:1}
-.joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(226,174,74,.85);box-shadow:0 0 18px rgba(226,174,74,.4)}
+.joy i{position:absolute;left:50%;top:50%;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:var(--paper)}
 
 .touch .btn kbd{display:none}
 #app.intro-open .hud,#app.intro-open .joy,#app.intro-open .cross{visibility:hidden}
 @media (max-width:640px){
-  .sheet{top:auto;left:0;right:0;width:auto;bottom:0;max-height:60%;border-radius:14px 14px 0 0;border-bottom:0}
-  .sheet::before{content:"";display:block;width:40px;height:4px;margin:8px auto 0;border-radius:2px;background:var(--line)}
-  #catalog{max-height:82%}
-  .sheet h2{font-size:21px}
-  .brand .eyebrow{display:none}
-  .brand h1{margin:0;font-size:13px;line-height:1.25;max-width:22ch}
-  .passport{padding:8px 10px}
-  .cross{display:none}
+  .sheet{top:auto;left:0;right:0;width:auto;bottom:0;max-height:60%}
   .sheet-inner{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-bottom:calc(22px + env(safe-area-inset-bottom,0px))}
-  .zone-chip{font-size:12px;padding:7px 10px}
-  .ticks span{width:9px}
-  .btn{padding:9px 12px;font-size:13.5px}
-  .btn kbd{display:none}
-  .prompt{bottom:auto;top:calc(62px + env(safe-area-inset-top,0px));padding:12px 18px 12px 14px}
+  .band{margin-left:calc(-1 * max(16px,env(safe-area-inset-left,0px)));margin-right:calc(-1 * max(16px,env(safe-area-inset-right,0px)));padding-left:max(16px,env(safe-area-inset-left,0px))}
+  .sheet h2{font-size:26px}
+  .facts div{grid-template-columns:98px 1fr}
+  .brand small{display:none}
+  .brand h1{font-size:14px;max-width:13ch;line-height:1.05}
+  .hall-tag span{font-size:13px}
+  .hall-tag em{display:none}
+  .btn{padding:10px 12px;font-size:14px}
+  .cross{display:none}
+  .prompt{bottom:auto;top:calc(64px + env(safe-area-inset-top,0px))}
   .joy{bottom:calc(150px + env(safe-area-inset-bottom,0px))}
-  .intro{align-items:flex-start;background:rgba(5,7,12,.94)}
-  .intro-inner{gap:16px}
+  .intro{align-items:flex-start;background:rgba(12,13,15,.75)}
+  .intro-inner{padding:0 18px 20px;margin:0}
+  .intro .band{margin:0 -18px;padding:10px 18px}
+  .intro .lead{font-size:16px}
   .intro .go{align-self:stretch;justify-content:center}
-  .intro p{font-size:16px}
 }
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -177,24 +152,19 @@ kbd{display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 6px;border:1p
 
   <div class="hud top">
     <div class="brand">
-      <div class="eyebrow">НАСА · 1967 → сегодня</div>
       <h1>Музей оставленных машин</h1>
+      <small>аппараты НАСА, 1967 — наши дни</small>
     </div>
-    <div class="zone-chip" id="zoneChip"><i></i><span>Вестибюль</span></div>
+    <div class="hall-tag" id="zoneChip"><b>0</b><span>Вестибюль<em>вход</em></span></div>
   </div>
 
   <button class="prompt" id="prompt" type="button" hidden><i></i><span class="nm"></span><span class="hint"></span></button>
 
   <div class="hud bottom">
-    <div class="passport" aria-live="polite">
-      <div class="lbl">Паспорт исследователя <b id="pcount">0 / 15</b></div>
-      <div class="ticks" id="ticks"></div>
-    </div>
     <div class="actions">
-      <button class="btn" id="btnCatalog" type="button">Каталог <kbd>K</kbd></button>
-      <button class="btn" id="btnHelp" type="button">Помощь</button>
-      <button class="btn icon" id="btnPrev" type="button" aria-label="Предыдущий экспонат">‹</button>
-      <button class="btn icon" id="btnNext" type="button" aria-label="Следующий экспонат">›</button>
+      <button class="btn" id="btnHelp" type="button" aria-label="Как управлять">?</button>
+      <button class="btn icon" id="btnPrev" type="button" aria-label="Предыдущий экспонат">←</button>
+      <button class="btn icon" id="btnNext" type="button" aria-label="Следующий экспонат">→</button>
     </div>
   </div>
 
@@ -202,32 +172,16 @@ kbd{display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 6px;border:1p
 
   <aside class="sheet" id="card" hidden aria-live="polite"><div class="sheet-inner" id="cardBody"></div></aside>
 
-  <aside class="sheet" id="catalog" hidden>
-    <div class="sheet-inner">
-      <div class="head">
-        <div class="eyebrow" style="color:var(--foil)">15 экспонатов · 3 зала</div>
-        <button class="x" type="button" data-close aria-label="Закрыть каталог">×</button>
-      </div>
-      <h2>Каталог</h2>
-      <div id="catBody" style="display:flex;flex-direction:column;gap:14px"></div>
-      <p class="note">Нажми на аппарат, и музей перенесёт тебя к нему. Статусы указаны по последним известным данным НАСА. Модели упрощённые, масштаб в зале условный.</p>
-    </div>
-  </aside>
-
-  <div class="toast" id="toast" hidden></div>
 
   <div class="intro" id="intro">
     <div class="intro-inner">
-      <div class="eyebrow" style="color:var(--foil)">3D-библиотека · для юных исследователей космоса</div>
-      <h2>Машины, которые <em>не вернулись</em> домой</h2>
-      <p>С 1960-х годов НАСА оставило свои аппараты на Луне и на Марсе, а некоторые отправило за пределы Солнечной системы. Одни давно молчат, другие работают до сих пор. Пройди по трём залам, рассмотри 15 машин и узнай, что люди открыли благодаря им.</p>
-      <div class="halls">
-        <div class="hall" style="--zc:var(--moon)"><b>Луна</b><span>4 экспоната</span></div>
-        <div class="hall" style="--zc:var(--mars)"><b>Марс</b><span>7 экспонатов</span></div>
-        <div class="hall" style="--zc:var(--deep)"><b>Дальний космос</b><span>4 экспоната</span></div>
-      </div>
+      <div class="band" style="--hc:var(--ink)"><span>Выставка · 3 зала · 15 экспонатов</span></div>
+      <h2>Музей оставленных машин</h2>
+      <p class="lead">С 1960-х годов НАСА отправило десятки аппаратов на Луну, на Марс и дальше. Почти все они там и остались. Одни давно замолчали, другие до сих пор присылают данные на Землю.</p>
+      <p class="lead">Здесь собраны 15 таких машин. Подходи к любой, рассматривай со всех сторон и читай, что учёные узнали с её помощью.</p>
       <div class="controls" id="controls"></div>
-      <button class="btn primary go" id="btnEnter" type="button">Войти в музей</button>
+      <p class="note">Модели упрощены, масштаб в зале условный. Состояние аппаратов указано по последним известным данным НАСА.</p>
+      <button class="btn dark go" id="btnEnter" type="button">Войти в музей →</button>
     </div>
   </div>
 </div>
@@ -247,12 +201,13 @@ document.addEventListener('dblclick', e => { if (e.target.id === 'c') e.preventD
 
 /* ---------- content ---------- */
 const ZONES = [
-  { id:'moon', name:'Луна', hall:'Зал 1', years:'1967–1972', css:'#d2cbbb', hex:0xd2cbbb },
-  { id:'mars', name:'Марс', hall:'Зал 2', years:'1976 — сегодня', css:'#e57c4f', hex:0xe57c4f },
-  { id:'deep', name:'Дальний космос', hall:'Зал 3', years:'1972 — сегодня', css:'#8fb2ff', hex:0x8fb2ff }
+  { id:'moon', n:1, name:'Луна', hall:'Зал 1', years:'1967–1972', css:'#8f8e86', hex:0x8f8e86 },
+  { id:'mars', n:2, name:'Марс', hall:'Зал 2', years:'1976 — наши дни', css:'#b4441c', hex:0xb4441c },
+  { id:'deep', n:3, name:'Дальний космос', hall:'Зал 3', years:'1972 — наши дни', css:'#2451c6', hex:0x2451c6 }
 ];
 const STATUS = { active:'Работает', done:'Миссия завершена', silent:'Летит молча' };
-const STATUS_CSS = { active:'#72d39c', done:'#e2ae4a', silent:'#8d9abb' };
+const STATUS_CSS = { active:'#1c7a3d', done:'#8a5a00', silent:'#525d78' };
+const PAPER = '#f1f0eb', INK = '#121212';
 
 const EX = [
   { id:'surveyor3', zone:'moon', name:'Сервейер-3', en:'Surveyor 3', year:1967, build:buildSurveyor, size:2.7,
@@ -335,30 +290,33 @@ const EX = [
 ];
 EX.forEach((e, i) => { e.i = i; e.num = String(i + 1).padStart(2, '0'); e.z0 = ZONES.find(z => z.id === e.zone); });
 
+// hall layout: zones follow each other along -z from the entrance (z = 9); exhibits alternate left/right
+const HALL_START = 9;
+(function layout() {
+  let z = 0;
+  ZONES.forEach(zn => {
+    const list = EX.filter(e => e.zone === zn.id);
+    zn.zStart = z;
+    list.forEach((e, i) => { e.side = i % 2 === 0 ? -1 : 1; e.x = e.side * 6.2; e.z = zn.zStart - 7 - i * 4.5; });
+    zn.zEnd = zn.zStart - (14 + (list.length - 1) * 4.5);
+    zn.count = list.length;
+    z = zn.zEnd;
+  });
+})();
+
 /* ---------- UI scaffolding that works even without WebGL ---------- */
 const controlsEl = $('#controls');
 controlsEl.innerHTML = isTouch
   ? `<span class="k"><kbd>Тап по полу</kbd></span><span>дойти до этого места</span>
      <span class="k"><kbd>Тап по аппарату</kbd></span><span>подойти и открыть карточку</span>
-     <span class="k"><kbd>‹ ›</kbd></span><span>экскурсия: к следующему экспонату</span>
+     <span class="k"><kbd>←</kbd><kbd>→</kbd></span><span>экскурсия: к соседнему экспонату</span>
      <span class="k"><kbd>Палец слева</kbd></span><span>джойстик, до края — бегом</span>
      <span class="k"><kbd>Свайп справа</kbd></span><span>осмотреться</span>`
   : `<span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>идти, со стрелками можно поворачивать</span>
      <span class="k"><kbd>Мышь</kbd></span><span>зажми и тяни, чтобы осмотреться</span>
      <span class="k"><kbd>Shift</kbd></span><span>бежать</span>
      <span class="k"><kbd>E</kbd><kbd>клик</kbd></span><span>открыть карточку экспоната, клик по полу — дойти туда</span>
-     <span class="k"><kbd>‹</kbd><kbd>›</kbd></span><span>экскурсия по экспонатам</span>
-     <span class="k"><kbd>K</kbd></span><span>каталог всех аппаратов</span>`;
-
-let visited = new Set();
-try { visited = new Set(JSON.parse(localStorage.getItem('nasa-museum-visited') || '[]')); } catch (e) {}
-const ticksEl = $('#ticks');
-ticksEl.innerHTML = EX.map(e => `<span style="--tc:${e.z0.css}" title="${e.name}"></span>`).join('');
-function renderPassport() {
-  [...ticksEl.children].forEach((s, i) => s.classList.toggle('on', visited.has(EX[i].id)));
-  $('#pcount').textContent = `${visited.size} / ${EX.length}`;
-}
-renderPassport();
+     <span class="k"><kbd>←</kbd><kbd>→</kbd></span><span>кнопки внизу: к соседнему экспонату</span>`;
 
 let THREE_OK = !!window.THREE;
 let renderer;
@@ -375,7 +333,7 @@ if (!THREE_OK) {
 /* ---------- fonts before drawing canvas labels ---------- */
 try {
   await Promise.race([
-    Promise.all(['700 64px Unbounded', '600 32px "JetBrains Mono"', '500 32px "Golos Text"'].map(f => document.fonts.load(f))),
+    Promise.all(['700 64px "PT Sans Narrow"', '32px "PT Mono"', '32px "PT Sans"', '700 32px "PT Sans"', 'italic 32px "PT Serif"'].map(f => document.fonts.load(f))),
     new Promise(r => setTimeout(r, 2500))
   ]);
 } catch (e) {}
@@ -857,7 +815,7 @@ function wrapText(x, text, X, Y, maxW, lh) {
   if (line) x.fillText(line, X, Y);
   return Y;
 }
-const F_DISP = 'Unbounded, "Arial Black", sans-serif', F_MONO = '"JetBrains Mono", Consolas, monospace', F_BODY = '"Golos Text", system-ui, sans-serif';
+const F_DISP = '"PT Sans Narrow", "Arial Narrow", Arial, sans-serif', F_MONO = '"PT Mono", Consolas, monospace', F_BODY = '"PT Sans", Arial, sans-serif', F_SERIF = '"PT Serif", Georgia, serif';
 
 function groundTex(kind, repeat) {
   return canvasTex(512, 512, (x, w, h) => {
@@ -865,7 +823,7 @@ function groundTex(kind, repeat) {
     const base = { moon: '#5f5d59', mars: '#7f3f25', deep: '#0b0f1c', lobby: '#14171f' }[kind];
     x.fillStyle = base; x.fillRect(0, 0, w, h);
     if (kind === 'deep' || kind === 'lobby') {
-      x.strokeStyle = kind === 'deep' ? 'rgba(120,150,255,.16)' : 'rgba(226,174,74,.08)'; x.lineWidth = 2;
+      x.strokeStyle = kind === 'deep' ? 'rgba(120,150,255,.14)' : 'rgba(255,255,255,.06)'; x.lineWidth = 2;
       for (let i = 0; i <= 8; i++) { x.beginPath(); x.moveTo(i * 64, 0); x.lineTo(i * 64, h); x.stroke(); x.beginPath(); x.moveTo(0, i * 64); x.lineTo(w, i * 64); x.stroke(); }
       for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(255,255,255,${r() * 0.05})`; x.fillRect(r() * w, r() * h, 2, 2); }
       return;
@@ -896,56 +854,50 @@ function wallTex(zone, label) {
     for (let i = 0; i <= 2; i++) { x.beginPath(); x.moveTo(i * 256, 0); x.lineTo(i * 256, h); x.stroke(); }
     x.strokeStyle = 'rgba(255,255,255,.05)'; x.lineWidth = 1;
     for (let i = 0; i <= 2; i++) { x.beginPath(); x.moveTo(i * 256 + 3, 0); x.lineTo(i * 256 + 3, h); x.stroke(); }
-    x.fillStyle = zone ? zone.css : '#e2ae4a'; x.globalAlpha = 0.35; x.fillRect(0, h * 0.62, w, 3); x.globalAlpha = 0.22;
-    x.font = `600 18px ${F_MONO}`; x.fillText(label, 24, h * 0.62 - 14); x.fillText(label, 280, h * 0.62 - 14);
+    x.fillStyle = zone ? zone.css : PAPER; x.globalAlpha = 0.6; x.fillRect(0, h * 0.62, w, 3); x.fillStyle = PAPER; x.globalAlpha = 0.28;
+    x.font = `700 20px ${F_DISP}`; x.fillText(label, 24, h * 0.62 - 12); x.fillText(label, 280, h * 0.62 - 12);
     x.globalAlpha = 1;
   }, null);
 }
 
 function labelSprite(ex) {
+  // a printed paper label: number block in the hall colour, name, year and state
   const w = 1024, h = 300, zone = ex.z0;
   const tex = canvasTex(w, h, (x) => {
-    x.fillStyle = 'rgba(8,11,18,0.82)'; roundRect(x, 6, 6, w - 12, h - 12, 28); x.fill();
-    x.strokeStyle = zone.css; x.globalAlpha = 0.5; x.lineWidth = 3; x.stroke(); x.globalAlpha = 1;
-    x.textBaseline = 'alphabetic';
-    x.font = `600 38px ${F_MONO}`; x.fillStyle = zone.css;
-    x.fillText(`${ex.num} · ${zone.name.toUpperCase()} · ${ex.year}`, 52, 88);
-    fitFont(x, ex.name, 700, F_DISP, 86, w - 104, 40);
-    x.fillStyle = '#ece8dd'; x.fillText(ex.name, 52, 192);
-    x.font = `500 38px ${F_BODY}`; x.fillStyle = STATUS_CSS[ex.status];
-    x.beginPath(); x.arc(64, 248, 11, 0, 2 * PI); x.fill();
-    x.fillText(STATUS[ex.status], 88, 261);
+    x.fillStyle = PAPER; x.fillRect(0, 0, w, h);
+    x.fillStyle = zone.css; x.fillRect(0, 0, 150, h);
+    x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = `700 92px ${F_DISP}`; x.fillText(String(ex.i + 1), 75, 182);
+    x.textAlign = 'left'; x.fillStyle = INK;
+    fitFont(x, ex.name, 700, F_DISP, 92, w - 230, 44);
+    x.fillText(ex.name, 190, 128);
+    const sub = `${ex.en.split(/ ·| &|,/)[0]}, ${ex.year}`;
+    fitFont(x, sub, 'italic', F_SERIF, 40, w - 230, 26); x.fillStyle = '#66655f';
+    x.fillText(sub, 190, 192);
+    x.fillStyle = STATUS_CSS[ex.status]; x.fillRect(190, 228, 26, 26);
+    x.font = `700 38px ${F_BODY}`; x.fillText(STATUS[ex.status], 232, 254);
   });
-  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: false, depthWrite: true }));
   s.scale.set(3.3, 3.3 * h / w, 1);
   return s;
 }
 
-function signTex(title, sub, color) {
+// hall sign: hall number in a black square, name on the hall colour
+function signTex(num, title, sub, color) {
   return canvasTex(1024, 256, (x, w, h) => {
-    x.fillStyle = '#0b0f18'; x.fillRect(0, 0, w, h);
-    x.strokeStyle = color; x.globalAlpha = 0.6; x.lineWidth = 4; x.strokeRect(14, 14, w - 28, h - 28); x.globalAlpha = 1;
-    x.textAlign = 'center'; x.fillStyle = color;
-    fitFont(x, title, 700, F_DISP, 104, w - 120, 40);
-    x.fillText(title, w / 2, 140);
-    x.font = `600 30px ${F_MONO}`; x.fillStyle = '#9aa2b4';
-    x.fillText(sub, w / 2, 204);
+    x.fillStyle = color; x.fillRect(0, 0, w, h);
+    x.fillStyle = INK; x.fillRect(0, 0, 256, h);
+    x.fillStyle = '#fff'; x.textAlign = 'center'; x.font = `700 190px ${F_DISP}`; x.fillText(num, 128, 196);
+    x.textAlign = 'left';
+    fitFont(x, title.toUpperCase(), 700, F_DISP, 118, w - 330, 50);
+    x.fillText(title.toUpperCase(), 296, 140);
+    x.font = `italic 36px ${F_SERIF}`; x.globalAlpha = 0.9;
+    x.fillText(sub, 298, 202); x.globalAlpha = 1;
   });
 }
 
 /* ---------- hall ---------- */
 function buildHall() {
-  // lay out zones along -z; exhibits alternate left/right
-  let z = 0;
-  ZONES.forEach(zn => {
-    const list = EX.filter(e => e.zone === zn.id);
-    zn.zStart = z;
-    list.forEach((e, i) => { e.side = i % 2 === 0 ? -1 : 1; e.x = e.side * 6.2; e.z = zn.zStart - 7 - i * 4.5; });
-    zn.zEnd = zn.zStart - (14 + (list.length - 1) * 4.5);
-    zn.count = list.length;
-    z = zn.zEnd;
-  });
-  END_Z = z;
+  END_Z = ZONES[ZONES.length - 1].zEnd;
 
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshStandardMaterial({ color: 0x07080c, roughness: 1 }));
   ground.rotation.x = -PI / 2; ground.position.y = -0.02; scene.add(ground);
@@ -957,7 +909,7 @@ function buildHall() {
   const walls = (len, zMid, zone, label) => {
     const tex = wallTex(zone, label); tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(len / 5, 1);
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.3 });
-    const glow = new THREE.MeshBasicMaterial({ color: zone ? zone.hex : 0xe2ae4a });
+    const glow = new THREE.MeshBasicMaterial({ color: zone ? zone.hex : 0x8f8e86 });
     for (const sx of [-1, 1]) {
       box(0.4, 2.6, len, mat, sx * 10.2, 1.3, zMid, scene);
       box(0.04, 0.04, len, glow, sx * 9.99, 0.14, zMid, scene);
@@ -966,8 +918,9 @@ function buildHall() {
   };
   const runner = (len, zMid, color) => {
     const tex = canvasTex(64, 256, (x, w, h) => {
-      x.fillStyle = '#0d1119'; x.fillRect(0, 0, w, h);
-      x.fillStyle = color; x.globalAlpha = 0.55; x.fillRect(w / 2 - 2, 20, 4, 110); x.globalAlpha = 1;
+      x.fillStyle = '#1a1a1a'; x.fillRect(0, 0, w, h);
+      x.fillStyle = color; x.fillRect(0, 0, 3, h); x.fillRect(w - 3, 0, 3, h);
+      x.fillStyle = PAPER; x.globalAlpha = 0.5; x.fillRect(w / 2 - 2, 40, 4, 80); x.globalAlpha = 1;
     }, [1, len / 4]);
     const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, len), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, metalness: 0.3 }));
     m.rotation.x = -PI / 2; m.position.set(0, 0.006, zMid); scene.add(m);
@@ -976,7 +929,7 @@ function buildHall() {
   // lobby
   floorPlane(START_Z, START_Z / 2, groundTex('lobby', [20 / 8, START_Z / 8]), 0.4);
   walls(START_Z, START_Z / 2, null, 'ВЕСТИБЮЛЬ · NASA');
-  runner(START_Z, START_Z / 2, '#e2ae4a');
+  runner(START_Z, START_Z / 2, PAPER);
 
   ZONES.forEach((zn, zi) => {
     const len = zn.zStart - zn.zEnd, mid = (zn.zStart + zn.zEnd) / 2;
@@ -989,10 +942,10 @@ function buildHall() {
     box(0.5, 4.8, 0.5, pm, 9.7, 2.4, zn.zStart, scene);
     box(19.9, 1.4, 0.32, pm, 0, 4.6, zn.zStart, scene);
     box(19.9, 0.06, 0.34, new THREE.MeshBasicMaterial({ color: zn.hex }), 0, 3.88, zn.zStart, scene);
-    const front = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: signTex(zn.name, `${zn.hall.toUpperCase()} · ${zn.years} · ${zn.count} ЭКСП.`, zn.css) }));
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: signTex(String(zn.n), zn.name, `${zn.years}, ${zn.count} ${zn.count === 4 ? 'экспоната' : 'экспонатов'}`, zn.css) }));
     front.position.set(0, 4.6, zn.zStart + 0.17); scene.add(front);
     const prev = ZONES[zi - 1];
-    const back = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: prev ? signTex('← ' + prev.name, `${prev.hall.toUpperCase()} · НАЗАД`, prev.css) : signTex('Вестибюль', 'ВЫХОД ИЗ ЭКСПОЗИЦИИ', '#e2ae4a') }));
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: prev ? signTex(String(prev.n), '← ' + prev.name, 'обратно в предыдущий зал', prev.css) : signTex('0', 'Выход', 'к вестибюлю', '#3a3a38') }));
     back.position.set(0, 4.6, zn.zStart - 0.17); back.rotation.y = PI; scene.add(back);
     const stripe = new THREE.Mesh(new THREE.PlaneGeometry(20, 0.14), new THREE.MeshBasicMaterial({ color: zn.hex }));
     stripe.rotation.x = -PI / 2; stripe.position.set(0, 0.01, zn.zStart); scene.add(stripe);
@@ -1009,11 +962,12 @@ function buildHall() {
     p.position.set(0, 2.15, zPos + facing * 0.21); if (facing < 0) p.rotation.y = PI; scene.add(p);
   };
   endWall(START_Z + 0.2, -1, canvasTex(1000, 400, (x, w, h) => {
-    x.fillStyle = '#0b0f18'; x.fillRect(0, 0, w, h);
-    x.font = `600 22px ${F_MONO}`; x.fillStyle = '#e2ae4a'; x.fillText('ВЕСТИБЮЛЬ · ДОБРО ПОЖАЛОВАТЬ', 56, 80);
-    x.fillStyle = '#ece8dd'; fitFont(x, 'Музей оставленных машин', 700, F_DISP, 58, w - 112, 30); x.fillText('Музей оставленных машин', 56, 160);
-    x.font = `400 26px ${F_BODY}`; x.fillStyle = '#c9c5ba';
-    wrapText(x, '15 аппаратов НАСА, которые остались на Луне, на Марсе и улетели за пределы Солнечной системы. Иди вперёд по золотой дорожке.', 56, 230, w - 112, 38);
+    x.fillStyle = PAPER; x.fillRect(0, 0, w, h);
+    x.fillStyle = INK; x.fillRect(0, 0, w, 64);
+    x.font = `700 30px ${F_DISP}`; x.fillStyle = PAPER; x.fillText('ВЕСТИБЮЛЬ', 48, 43);
+    x.fillStyle = INK; fitFont(x, 'МУЗЕЙ ОСТАВЛЕННЫХ МАШИН', 700, F_DISP, 76, w - 96, 30); x.fillText('МУЗЕЙ ОСТАВЛЕННЫХ МАШИН', 48, 150);
+    x.font = `28px ${F_SERIF}`;
+    wrapText(x, 'Пятнадцать аппаратов НАСА, которые остались на Луне, на Марсе и улетели за пределы Солнечной системы. Экспозиция начинается за аркой.', 48, 215, w - 96, 40);
   }));
   endWall(END_Z - 0.2, 1, canvasTex(1000, 400, (x, w, h) => {
     x.fillStyle = '#020204'; x.fillRect(0, 0, w, h);
@@ -1021,9 +975,9 @@ function buildHall() {
     bands.forEach(([bx, c]) => { x.save(); x.translate(bx, 0); x.rotate(0.16); x.fillStyle = c; x.fillRect(-40, -60, 70, h + 120); x.restore(); });
     x.fillStyle = '#cfe2ff'; x.beginPath(); x.arc(668, 250, 2.6, 0, 2 * PI); x.fill();
     x.strokeStyle = 'rgba(207,226,255,.5)'; x.lineWidth = 1.5; x.beginPath(); x.arc(668, 250, 14, 0, 2 * PI); x.stroke();
-    x.font = `600 20px ${F_MONO}`; x.fillStyle = '#8fb2ff'; x.fillText('ВОЯДЖЕР-1 · 14 ФЕВРАЛЯ 1990 · 6 МЛРД КМ', 48, 70);
-    x.font = `700 40px ${F_DISP}`; x.fillStyle = '#ece8dd'; x.fillText('Бледная', 48, 150); x.fillText('голубая точка', 48, 200);
-    x.font = `400 23px ${F_BODY}`; x.fillStyle = '#c9c5ba';
+    x.font = `italic 22px ${F_SERIF}`; x.fillStyle = '#b9c6e8'; x.fillText('Снимок Вояджера-1, 14 февраля 1990 года', 48, 70);
+    x.font = `700 52px ${F_DISP}`; x.fillStyle = PAPER; x.fillText('БЛЕДНАЯ', 48, 150); x.fillText('ГОЛУБАЯ ТОЧКА', 48, 205);
+    x.font = `24px ${F_SERIF}`; x.fillStyle = '#d8d6ce';
     wrapText(x, 'Крошечная точка в кружке — это Земля. Все люди, которых ты знаешь, живут здесь.', 48, 270, 400, 33);
   }));
 
@@ -1050,7 +1004,7 @@ function buildHall() {
       baseY = 0.5;
     }
     // aisle-side floor number
-    const numTex = canvasTex(256, 128, (x, w, h) => { x.fillStyle = ex.z0.css; x.font = `700 72px ${F_MONO}`; x.textAlign = 'center'; x.fillText(ex.num, w / 2, 92); });
+    const numTex = canvasTex(256, 128, (x, w, h) => { x.fillStyle = PAPER; x.font = `700 84px ${F_DISP}`; x.textAlign = 'center'; x.fillText(String(ex.i + 1), w / 2, 96); });
     const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: numTex, transparent: true, opacity: 0.8, depthWrite: false }));
     nm.rotation.x = -PI / 2; nm.rotation.z = ex.side > 0 ? PI / 2 : -PI / 2; nm.position.set(-ex.side * 2.3, 0.012, 0); root.add(nm);
 
@@ -1139,7 +1093,6 @@ addEventListener('keydown', e => {
   keys.add(e.code);
   if (e.code === 'Escape') { closeSheets(); if (!started) enter(); }
   if (e.code === 'KeyE' && started && nearest && $('#card').hidden) openCard(nearest);
-  if (e.code === 'KeyK' && started) toggleCatalog();
   if (e.code === 'Enter' && !started && THREE_OK) enter();
 });
 addEventListener('keyup', e => keys.delete(e.code));
@@ -1246,7 +1199,7 @@ function setWalkTarget(x, z) {
   walkTarget = { x, z, stuck: 0 };
   tween = null;
   if (!marker) {
-    marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.34, 40), new THREE.MeshBasicMaterial({ color: 0xe2ae4a, transparent: true, depthWrite: false }));
+    marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.34, 40), new THREE.MeshBasicMaterial({ color: 0xf1f0eb, transparent: true, depthWrite: false }));
     marker.rotation.x = -PI / 2; scene.add(marker);
   }
   marker.position.set(x, 0.03, z); marker.visible = true;
@@ -1286,46 +1239,37 @@ function goTo(ex, open) {
   player.vx = player.vz = 0;
 }
 
-/* ---------- UI: cards, catalog ---------- */
-const card = $('#card'), cardBody = $('#cardBody'), catalog = $('#catalog');
+/* ---------- UI: exhibit cards ---------- */
+const card = $('#card'), cardBody = $('#cardBody');
 let currentEx = null;
 
 function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 function openCard(ex) {
   currentEx = ex;
-  catalog.hidden = true;
   const prev = EX[(ex.i - 1 + EX.length) % EX.length], next = EX[(ex.i + 1) % EX.length];
-  cardBody.style.setProperty('--zc', ex.z0.css);
+  cardBody.style.setProperty('--hc', ex.z0.css);
   cardBody.innerHTML = `
-    <div class="head">
-      <div class="eyebrow" style="color:${ex.z0.css}">Экспонат ${ex.num} · ${esc(ex.z0.name)}</div>
-      <button class="x" type="button" data-close aria-label="Закрыть карточку">×</button>
-    </div>
+    <div class="band"><span>${ex.z0.hall} · ${esc(ex.z0.name)}</span><span class="inv">экспонат № ${ex.i + 1}</span><button class="x" type="button" data-close aria-label="Закрыть карточку">×</button></div>
     <h2>${esc(ex.name)}</h2>
     <p class="en">${esc(ex.en)}</p>
-    <span class="status st-${ex.status}">${STATUS[ex.status]}</span>
+    <div class="status" style="--sc:${STATUS_CSS[ex.status]}">${STATUS[ex.status]}</div>
     <dl class="facts">
       <div><dt>Запуск</dt><dd>${esc(ex.launch)}</dd></div>
       <div><dt>Где сейчас</dt><dd>${esc(ex.where)}</dd></div>
-      <div><dt>Масса и размер</dt><dd>${esc(ex.mass)}</dd></div>
+      <div><dt>Масса</dt><dd>${esc(ex.mass)}</dd></div>
       <div><dt>Состояние</dt><dd>${esc(ex.statusText)}</dd></div>
     </dl>
     <p class="story">${esc(ex.story)}</p>
-    <h3>Что мы узнали благодаря ему</h3>
+    <h3>Что узнали учёные</h3>
     <ul class="learned">${ex.learned.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
-    <div class="didyou"><b>А ты знал?</b><p>${esc(ex.fact)}</p></div>
+    <div class="fact"><b>Интересно</b><p>${esc(ex.fact)}</p></div>
     <div class="nav">
-      <button type="button" data-go="${prev.i}"><small>← Предыдущий</small><span>${esc(prev.name)}</span></button>
-      <button type="button" class="next" data-go="${next.i}"><small>Следующий →</small><span>${esc(next.name)}</span></button>
+      <button type="button" data-go="${prev.i}"><small>← № ${prev.i + 1}</small><span>${esc(prev.name)}</span></button>
+      <button type="button" class="next" data-go="${next.i}"><small>№ ${next.i + 1} →</small><span>${esc(next.name)}</span></button>
     </div>`;
   card.hidden = false;
   card.scrollTop = 0;
   uiOpen = true;
-  const was = visited.has(ex.id);
-  visited.add(ex.id);
-  try { localStorage.setItem('nasa-museum-visited', JSON.stringify([...visited])); } catch (e) {}
-  renderPassport(); renderCatalog();
-  if (!was && visited.size === EX.length) toast('<b>Паспорт заполнен!</b> Ты изучил все 15 аппаратов. Теперь ты знаешь о машинах НАСА больше, чем многие взрослые.');
   try { history.replaceState(null, '', '#' + ex.id); } catch (e) {}
 }
 cardBody.addEventListener('click', e => {
@@ -1335,43 +1279,15 @@ cardBody.addEventListener('click', e => {
 document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheets(); });
 
 function closeSheets() {
-  card.hidden = true; catalog.hidden = true; uiOpen = false; currentEx = null;
+  card.hidden = true; uiOpen = false; currentEx = null;
   try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
   if (THREE_OK) cv.focus({ preventScroll: true });
 }
 
-function renderCatalog() {
-  $('#catBody').innerHTML = ZONES.map(zn => `
-    <section class="cat-zone">
-      <h4 style="color:${zn.css}">${zn.hall}. ${zn.name} <span>${zn.years}</span></h4>
-      <ul class="cat-list">${EX.filter(e => e.zone === zn.id).map(e => `
-        <li><button type="button" data-cat="${e.i}">
-          <span class="num">${e.num}</span>
-          <span class="cat-name">${esc(e.name)}<small style="color:${STATUS_CSS[e.status]}"><span class="dot"></span>${STATUS[e.status]} · ${e.year}</small></span>
-          <span class="seen">${visited.has(e.id) ? 'изучен ✓' : ''}</span>
-        </button></li>`).join('')}
-      </ul>
-    </section>`).join('');
-}
-renderCatalog();
-$('#catBody').addEventListener('click', e => {
-  const b = e.target.closest('[data-cat]'); if (!b) return;
-  const ex = EX[+b.dataset.cat];
-  if (!started && THREE_OK) enter(true);
-  if (THREE_OK) goTo(ex, true);
-  openCard(ex);
-});
-function toggleCatalog() {
-  if (!catalog.hidden) { closeSheets(); return; }
-  card.hidden = true; catalog.hidden = false; catalog.scrollTop = 0; uiOpen = true;
-}
-$('#btnCatalog').addEventListener('click', toggleCatalog);
 $('#btnPrev').addEventListener('click', () => { if (THREE_OK && started) tour(-1); });
 $('#btnNext').addEventListener('click', () => { if (THREE_OK && started) tour(1); });
 $('#btnHelp').addEventListener('click', () => { closeSheets(); $('#intro').hidden = false; $('#app').classList.add('intro-open'); started = false; $('#btnEnter').textContent = 'Продолжить'; $('#btnEnter').focus(); });
 
-let toastTimer;
-function toast(html) { const t = $('#toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 6500); }
 
 function enter(silent) {
   $('#intro').hidden = true; started = true;
@@ -1381,7 +1297,7 @@ function enter(silent) {
 }
 $('#btnEnter').addEventListener('click', () => {
   if (THREE_OK) enter();
-  else { $('#intro').hidden = true; toggleCatalog(); }
+  else { $('#intro').hidden = true; openCard(EX[0]); }
 });
 
 /* ---------- HUD state ---------- */
@@ -1390,11 +1306,11 @@ let nearest = null, lastZone = '';
 prompt.addEventListener('click', () => { if (nearest) openCard(nearest); });
 function updateHud() {
   let zn = ZONES.find(z => player.z <= z.zStart && player.z > z.zEnd);
-  const label = zn ? `${zn.hall} · ${zn.name}` : 'Вестибюль';
+  const label = zn ? zn.id : 'lobby';
   if (label !== lastZone) {
     lastZone = label;
-    zoneChip.style.setProperty('--zc', zn ? zn.css : 'var(--foil)');
-    zoneChip.querySelector('span').textContent = label;
+    zoneChip.style.setProperty('--hc', zn ? zn.css : INK);
+    zoneChip.innerHTML = zn ? `<b>${zn.n}</b><span>${zn.name}<em>${zn.years}</em></span>` : '<b>0</b><span>Вестибюль<em>вход</em></span>';
   }
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
   let best = null, bd = innerHeight > innerWidth ? 9 : 5.2;
@@ -1403,13 +1319,13 @@ function updateHud() {
     if (d < bd && (dx * fx + dz * fz) / d > 0.35) { bd = d; best = ex; }
   }
   nearest = best;
-  const show = !!best && card.hidden && catalog.hidden && started;
+  const show = !!best && card.hidden && started;
   if (prompt.hidden === show) prompt.hidden = !show;
   if (show && best !== shownEx) {
     shownEx = best;
     prompt.style.setProperty('--pc', best.z0.css);
-    prompt.querySelector('.nm').textContent = best.name;
-    prompt.querySelector('.hint').innerHTML = isTouch ? '· открыть карточку' : '· открыть <kbd>E</kbd>';
+    prompt.querySelector('.nm').textContent = `№ ${best.i + 1}. ${best.name}`;
+    prompt.querySelector('.hint').innerHTML = isTouch ? 'читать' : 'читать <kbd>E</kbd>';
   }
 }
 let shownEx = null;
