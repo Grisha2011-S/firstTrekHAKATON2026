@@ -29,7 +29,7 @@
   color-scheme:dark;
 }
 [hidden]{display:none!important}
-html,body{height:100%;margin:0;overflow:hidden;background:var(--void);color:var(--fg);font-family:var(--f-body)}
+html,body{height:100%;margin:0;overflow:hidden;overscroll-behavior:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent;background:var(--void);color:var(--fg);font-family:var(--f-body)}
 #app{position:fixed;inset:0;overflow:hidden;background:var(--void)}
 #c{display:block;width:100%;height:100%;touch-action:none;cursor:grab;outline:none}
 #c.dragging{cursor:grabbing}
@@ -138,7 +138,11 @@ kbd{display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 6px;border:1p
 .toast{position:absolute;z-index:9;left:50%;top:calc(76px + env(safe-area-inset-top,0px));transform:translateX(-50%);max-width:calc(100% - 32px);padding:12px 16px;border-radius:8px;background:var(--panel-solid);border:1px solid var(--foil);font:500 14.5px/1.45 var(--f-body);text-align:center}
 .toast b{color:var(--foil)}
 
-.joy{position:absolute;z-index:6;left:max(22px,calc(env(safe-area-inset-left,0px) + 16px));bottom:calc(110px + env(safe-area-inset-bottom,0px));width:116px;height:116px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,14,22,.45);touch-action:none}
+.joy{position:absolute;z-index:6;left:max(22px,calc(env(safe-area-inset-left,0px) + 16px));bottom:calc(110px + env(safe-area-inset-bottom,0px));width:116px;height:116px;border-radius:50%;border:1px solid rgba(255,255,255,.2);background:rgba(10,14,22,.45);pointer-events:none;opacity:.5;transition:opacity .15s}
+.joy.active{opacity:1}
+.joy::after{content:"Веди пальцем здесь";position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);white-space:nowrap;font:500 12px var(--f-body);color:var(--muted)}
+.joy.active::after{content:none}
+.btn.icon{width:44px;justify-content:center;padding-left:0;padding-right:0;font-size:22px;line-height:1}
 .joy i{position:absolute;left:50%;top:50%;width:48px;height:48px;margin:-24px 0 0 -24px;border-radius:50%;background:rgba(226,174,74,.85);box-shadow:0 0 18px rgba(226,174,74,.4)}
 
 .touch .btn kbd{display:none}
@@ -188,7 +192,9 @@ kbd{display:inline-block;font:600 11px/1 var(--f-mono);padding:4px 6px;border:1p
     </div>
     <div class="actions">
       <button class="btn" id="btnCatalog" type="button">Каталог <kbd>K</kbd></button>
-      <button class="btn" id="btnHelp" type="button">Управление</button>
+      <button class="btn" id="btnHelp" type="button">Помощь</button>
+      <button class="btn icon" id="btnPrev" type="button" aria-label="Предыдущий экспонат">‹</button>
+      <button class="btn icon" id="btnNext" type="button" aria-label="Следующий экспонат">›</button>
     </div>
   </div>
 
@@ -332,13 +338,16 @@ EX.forEach((e, i) => { e.i = i; e.num = String(i + 1).padStart(2, '0'); e.z0 = Z
 /* ---------- UI scaffolding that works even without WebGL ---------- */
 const controlsEl = $('#controls');
 controlsEl.innerHTML = isTouch
-  ? `<span class="k"><kbd>Джойстик</kbd></span><span>идти (левая часть экрана)</span>
-     <span class="k"><kbd>Свайп</kbd></span><span>осмотреться</span>
-     <span class="k"><kbd>Тап</kbd></span><span>открыть карточку экспоната</span>`
+  ? `<span class="k"><kbd>Тап по полу</kbd></span><span>дойти до этого места</span>
+     <span class="k"><kbd>Тап по аппарату</kbd></span><span>подойти и открыть карточку</span>
+     <span class="k"><kbd>‹ ›</kbd></span><span>экскурсия: к следующему экспонату</span>
+     <span class="k"><kbd>Палец слева</kbd></span><span>джойстик, до края — бегом</span>
+     <span class="k"><kbd>Свайп справа</kbd></span><span>осмотреться</span>`
   : `<span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>идти, со стрелками можно поворачивать</span>
      <span class="k"><kbd>Мышь</kbd></span><span>зажми и тяни, чтобы осмотреться</span>
      <span class="k"><kbd>Shift</kbd></span><span>бежать</span>
-     <span class="k"><kbd>E</kbd><kbd>клик</kbd></span><span>открыть карточку экспоната</span>
+     <span class="k"><kbd>E</kbd><kbd>клик</kbd></span><span>открыть карточку экспоната, клик по полу — дойти туда</span>
+     <span class="k"><kbd>‹</kbd><kbd>›</kbd></span><span>экскурсия по экспонатам</span>
      <span class="k"><kbd>K</kbd></span><span>каталог всех аппаратов</span>`;
 
 let visited = new Set();
@@ -372,7 +381,7 @@ try {
 } catch (e) {}
 
 /* ---------- three.js setup ---------- */
-let scene, camera, pickMeshes = [], clock;
+let scene, camera, pickMeshes = [], floorMeshes = [], clock;
 const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
 const UP = THREE_OK ? V3(0, 1, 0) : null;
 let M = {};
@@ -943,7 +952,7 @@ function buildHall() {
 
   const floorPlane = (len, zMid, tex, rough) => {
     const m = new THREE.Mesh(new THREE.PlaneGeometry(20, len), new THREE.MeshStandardMaterial({ map: tex, roughness: rough, metalness: 0.05 }));
-    m.rotation.x = -PI / 2; m.position.set(0, 0, zMid); scene.add(m);
+    m.rotation.x = -PI / 2; m.position.set(0, 0, zMid); scene.add(m); floorMeshes.push(m);
   };
   const walls = (len, zMid, zone, label) => {
     const tex = wallTex(zone, label); tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(len / 5, 1);
@@ -1136,61 +1145,122 @@ addEventListener('keydown', e => {
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
+/* Touch scheme: a finger on the left part of the screen becomes a joystick right where it lands,
+   any other finger looks around (with a little inertia). A short tap anywhere walks to that spot
+   on the floor, or walks up to an exhibit and opens its card. Mouse keeps drag-to-look and click. */
 const cv = $('#c');
-let look = null;
+const joy = $('#joy'), knob = joy.querySelector('i');
+const JOY_R = 46;
+let look = null, stick = null, yawVel = 0, walkTarget = null, tourIdx = -1;
+
+const isJoyZone = e => e.pointerType === 'touch' && e.clientX < innerWidth * 0.45 && e.clientY > innerHeight * 0.3;
 cv.addEventListener('pointerdown', e => {
   if (!started) return;
+  if (!stick && isJoyZone(e)) {
+    stick = { id: e.pointerId, ox: e.clientX, oy: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), moved: 0 };
+    placeJoy(stick.ox, stick.oy);
+    joy.classList.add('active');
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+    return;
+  }
   if (look) return;
-  look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() };
+  look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now(), lt: performance.now(), v: 0 };
+  yawVel = 0;
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
   cv.classList.add('dragging');
 });
+function placeJoy(x, y) { joy.style.left = (x - 58) + 'px'; joy.style.top = (y - 58) + 'px'; joy.style.bottom = 'auto'; }
 cv.addEventListener('pointermove', e => {
-  if (look && e.pointerId === look.id) {
-    const k = e.pointerType === 'touch' ? 0.006 : 0.0042;
-    player.yaw -= (e.clientX - look.x) * k;
-    player.pitch = Math.max(-1.1, Math.min(1.1, player.pitch - (e.clientY - look.y) * k * 0.85));
-    look.x = e.clientX; look.y = e.clientY;
-    tween = null;
+  if (stick && e.pointerId === stick.id) {
+    let dx = e.clientX - stick.ox, dy = e.clientY - stick.oy; const d = Math.hypot(dx, dy);
+    stick.moved = Math.max(stick.moved, Math.hypot(e.clientX - stick.sx, e.clientY - stick.sy));
+    // the base trails the finger, so a long drag never runs out of stick
+    if (d > JOY_R) {
+      stick.ox += dx * (1 - JOY_R / d); stick.oy += dy * (1 - JOY_R / d);
+      dx *= JOY_R / d; dy *= JOY_R / d; placeJoy(stick.ox, stick.oy);
+    }
+    const m = Math.hypot(dx, dy) / JOY_R;
+    const k = m < 0.14 ? 0 : (m - 0.14) / 0.86 / m;
+    joyVec.x = dx / JOY_R * k; joyVec.y = dy / JOY_R * k;
+    knob.style.transform = `translate(${dx}px,${dy}px)`;
+    if (m >= 0.14) { tween = null; walkTarget = null; }
+  } else if (look && e.pointerId === look.id) {
+    const k = e.pointerType === 'touch' ? 2.4 / Math.max(320, innerWidth) : 0.0042;
+    const dx = e.clientX - look.x, now = performance.now();
+    player.yaw -= dx * k;
+    player.pitch = Math.max(-1.0, Math.min(1.0, player.pitch - (e.clientY - look.y) * k * 0.8));
+    look.v = 0.6 * look.v + 0.4 * (-dx * k / Math.max(1, now - look.lt) * 1000);
+    look.x = e.clientX; look.y = e.clientY; look.lt = now;
+    if (Math.hypot(e.clientX - look.sx, e.clientY - look.sy) > 9) tween = null;
   } else if (!look && e.pointerType === 'mouse' && started) {
-    const hit = pick(e.clientX, e.clientY);
-    cv.classList.toggle('hovering', !!hit);
+    cv.classList.toggle('hovering', !!pick(e.clientX, e.clientY));
   }
 });
-const endLook = e => {
+const endPointer = e => {
+  if (stick && e.pointerId === stick.id) {
+    const tap = stick.moved < 10 && performance.now() - stick.t < 400;
+    stick = null; joyVec.x = joyVec.y = 0; knob.style.transform = '';
+    joy.classList.remove('active'); joy.style.left = joy.style.top = joy.style.bottom = '';
+    if (tap && e.type === 'pointerup') tapAt(e.clientX, e.clientY);
+    return;
+  }
   if (!look || e.pointerId !== look.id) return;
   const moved = Math.hypot(e.clientX - look.sx, e.clientY - look.sy);
-  if (moved < 7 && performance.now() - look.t < 500) { const ex = pick(e.clientX, e.clientY); if (ex) openCard(ex); }
+  if (moved < 10 && performance.now() - look.t < 450 && e.type === 'pointerup') tapAt(e.clientX, e.clientY);
+  else if (e.pointerType === 'touch' && performance.now() - look.lt < 80 && !reduceMotion) yawVel = Math.max(-4, Math.min(4, look.v));
   look = null; cv.classList.remove('dragging');
 };
-cv.addEventListener('pointerup', endLook);
-cv.addEventListener('pointercancel', endLook);
+cv.addEventListener('pointerup', endPointer);
+cv.addEventListener('pointercancel', endPointer);
+
+function tapAt(cx, cy) {
+  const ex = pick(cx, cy);
+  if (ex) {
+    if (isTouch || Math.hypot(ex.x - player.x, ex.z - player.z) > 6.5) goTo(ex, true);
+    tourIdx = ex.i;
+    openCard(ex);
+    return;
+  }
+  const hit = pickFloor(cx, cy);
+  if (hit) setWalkTarget(hit.x, hit.z);
+}
 
 const ray = THREE_OK ? new THREE.Raycaster() : null;
-function pick(cx, cy) {
+function castFrom(cx, cy) {
   const r = cv.getBoundingClientRect();
   ray.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
-  ray.far = 22;
+}
+function pick(cx, cy) {
+  castFrom(cx, cy); ray.far = 22;
   const hits = ray.intersectObjects(pickMeshes, false);
   return hits.length ? hits[0].object.userData.ex : null;
 }
+function pickFloor(cx, cy) {
+  castFrom(cx, cy); ray.far = 60;
+  const hits = ray.intersectObjects(floorMeshes, false);
+  return hits.length ? hits[0].point : null;
+}
+let marker = null;
+function setWalkTarget(x, z) {
+  [x, z] = collide(x, z);
+  walkTarget = { x, z, stuck: 0 };
+  tween = null;
+  if (!marker) {
+    marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.34, 40), new THREE.MeshBasicMaterial({ color: 0xe2ae4a, transparent: true, depthWrite: false }));
+    marker.rotation.x = -PI / 2; scene.add(marker);
+  }
+  marker.position.set(x, 0.03, z); marker.visible = true;
+}
 
-// touch joystick
-const joy = $('#joy');
-if (isTouch && THREE_OK) {
-  let jid = null;
-  const knob = joy.querySelector('i');
-  const setJoy = e => {
-    const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-    let dx = e.clientX - cx, dy = e.clientY - cy; const d = Math.hypot(dx, dy), max = 44;
-    if (d > max) { dx *= max / d; dy *= max / d; }
-    joyVec.x = dx / max; joyVec.y = dy / max;
-    knob.style.transform = `translate(${dx}px,${dy}px)`;
-  };
-  joy.addEventListener('pointerdown', e => { jid = e.pointerId; try { joy.setPointerCapture(jid); } catch (err) {} setJoy(e); tween = null; });
-  joy.addEventListener('pointermove', e => { if (e.pointerId === jid) setJoy(e); });
-  const rel = e => { if (e.pointerId !== jid) return; jid = null; joyVec.x = joyVec.y = 0; knob.style.transform = ''; };
-  joy.addEventListener('pointerup', rel); joy.addEventListener('pointercancel', rel);
+function tour(step) {
+  if (tourIdx < 0) {
+    // start from the first exhibit ahead of the visitor
+    const ahead = EX.findIndex(e => e.z < player.z - 1);
+    tourIdx = step > 0 ? (ahead < 0 ? 0 : ahead) : (ahead <= 0 ? EX.length - 1 : ahead - 1);
+  } else tourIdx = (tourIdx + step + EX.length) % EX.length;
+  closeSheets();
+  walkTarget = null;
+  goTo(EX[tourIdx], false);
 }
 
 function collide(px, pz) {
@@ -1296,6 +1366,8 @@ function toggleCatalog() {
   card.hidden = true; catalog.hidden = false; catalog.scrollTop = 0; uiOpen = true;
 }
 $('#btnCatalog').addEventListener('click', toggleCatalog);
+$('#btnPrev').addEventListener('click', () => { if (THREE_OK && started) tour(-1); });
+$('#btnNext').addEventListener('click', () => { if (THREE_OK && started) tour(1); });
 $('#btnHelp').addEventListener('click', () => { closeSheets(); $('#intro').hidden = false; $('#app').classList.add('intro-open'); started = false; $('#btnEnter').textContent = 'Продолжить'; $('#btnEnter').focus(); });
 
 let toastTimer;
@@ -1325,7 +1397,7 @@ function updateHud() {
     zoneChip.querySelector('span').textContent = label;
   }
   const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
-  let best = null, bd = 5.2;
+  let best = null, bd = innerHeight > innerWidth ? 9 : 5.2;
   for (const ex of EX) {
     const dx = ex.x - player.x, dz = ex.z - player.z, d = Math.hypot(dx, dz);
     if (d < bd && (dx * fx + dz * fz) / d > 0.35) { bd = d; best = ex; }
@@ -1359,14 +1431,32 @@ function frame() {
     if (keys.has('KeyD')) ix += 1;
     if (keys.has('ArrowLeft')) player.yaw += 1.9 * dt;
     if (keys.has('ArrowRight')) player.yaw -= 1.9 * dt;
+    if (ix || iz) walkTarget = null;
     ix += joyVec.x; iz -= joyVec.y;
     const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
-    const speed = (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 7 : 3.6;
+    // a joystick pushed to the rim breaks into a run
+    const run = keys.has('ShiftLeft') || keys.has('ShiftRight') || Math.hypot(joyVec.x, joyVec.y) > 0.93;
+    const speed = run ? 6.5 : 3.6;
     const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), rx = Math.cos(player.yaw), rz = -Math.sin(player.yaw);
-    const tvx = (fx * iz + rx * ix) * speed, tvz = (fz * iz + rz * ix) * speed;
+    let tvx = (fx * iz + rx * ix) * speed, tvz = (fz * iz + rz * ix) * speed;
+    if (walkTarget) {
+      const dx = walkTarget.x - player.x, dz = walkTarget.z - player.z, d = Math.hypot(dx, dz);
+      if (d < 0.3 || walkTarget.stuck > 0.6) { walkTarget = null; if (marker) marker.visible = false; }
+      else {
+        const v = Math.min(4.2, d * 2.2);
+        tvx = dx / d * v; tvz = dz / d * v;
+        // turn gently toward where we are walking
+        let dy = Math.atan2(-dx, -dz) - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+        if (!look) player.yaw += dy * Math.min(1, dt * 2.5);
+      }
+    } else if (marker) marker.visible = false;
+    if (isTouch && !look && (joyVec.x || joyVec.y || walkTarget)) player.pitch += (-0.05 - player.pitch) * Math.min(1, dt * 1.5);
+    if (yawVel) { player.yaw += yawVel * dt; yawVel *= Math.exp(-dt * 5); if (Math.abs(yawVel) < 0.02) yawVel = 0; }
     const a = 1 - Math.exp(-dt * 10);
     player.vx += (tvx - player.vx) * a; player.vz += (tvz - player.vz) * a;
+    const px = player.x, pz = player.z;
     [player.x, player.z] = collide(player.x + player.vx * dt, player.z + player.vz * dt);
+    if (walkTarget) walkTarget.stuck = Math.hypot(player.x - px, player.z - pz) < dt * 0.4 ? walkTarget.stuck + dt : 0;
     if (!reduceMotion) player.bob += Math.hypot(player.vx, player.vz) * dt * 2.2;
   }
   const bob = reduceMotion ? 0 : Math.sin(player.bob) * 0.035;
