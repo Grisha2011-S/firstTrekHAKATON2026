@@ -1,0 +1,1153 @@
+(async function(){
+'use strict';
+const PI = Math.PI;
+const $ = s => document.querySelector(s);
+const isTouch = matchMedia('(pointer: coarse)').matches;
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+/* ---------- content ---------- */
+const ZONES = [
+  { id:'moon', name:'Луна', hall:'Зал 1', years:'1967–1972', css:'#d2cbbb', hex:0xd2cbbb },
+  { id:'mars', name:'Марс', hall:'Зал 2', years:'1976 — сегодня', css:'#e57c4f', hex:0xe57c4f },
+  { id:'deep', name:'Дальний космос', hall:'Зал 3', years:'1972 — сегодня', css:'#8fb2ff', hex:0x8fb2ff }
+];
+const STATUS = { active:'Работает', done:'Миссия завершена', silent:'Летит молча' };
+const STATUS_CSS = { active:'#72d39c', done:'#e2ae4a', silent:'#8d9abb' };
+
+const EX = [
+  { id:'surveyor3', zone:'moon', name:'Сервейер-3', en:'Surveyor 3', year:1967, build:buildSurveyor, size:2.7,
+    launch:'17 апреля 1967', where:'Океан Бурь, Луна', mass:'≈ 300 кг на Луне', status:'done', statusText:'Работал две недели в 1967 году',
+    story:'Сервейер-3 — робот-разведчик. Он должен был проверить, выдержит ли лунный грунт посадку кораблей с людьми. При посадке двигатели не выключились вовремя, и аппарат дважды подпрыгнул, прежде чем встать на опоры. Две недели он фотографировал Луну и копал грунт маленьким ковшом.',
+    learned:['Лунный грунт достаточно прочный, чтобы на него садились корабли с астронавтами','Ковш показал, что реголит ведёт себя как влажный песок: держит форму и слипается','На Землю пришло больше 6000 снимков лунной поверхности'],
+    fact:'В ноябре 1969 года к Сервейеру-3 пешком подошли астронавты «Аполлона-12». Они сняли с него телекамеру и привезли её на Землю. Это единственный раз, когда люди навестили робота на другом небесном теле.' },
+  { id:'eagle', zone:'moon', name:'Посадочная ступень «Игл»', en:'Apollo 11 Lunar Module «Eagle», descent stage', year:1969, build:buildLM, size:3.1,
+    launch:'16 июля 1969', where:'Море Спокойствия, Луна', mass:'≈ 2 т без топлива', status:'done', statusText:'Стоит на месте первой высадки',
+    story:'20 июля 1969 года лунный модуль «Игл» с Нилом Армстронгом и Баззом Олдрином сел на Луну. Его нижняя часть, посадочная ступень, потом стала стартовой площадкой: верхняя ступень улетела с неё к кораблю на орбите. Сама ступень осталась на Луне навсегда. На её опоре закреплена табличка о том, что здесь люди с планеты Земля впервые ступили на Луну.',
+    learned:['Астронавты привезли 21,5 кг лунных камней и грунта','Рядом с модулем поставили сейсмометр и лазерный отражатель','Образцы показали, что Луна очень древняя и сухая, в ней нет ни воды, ни жизни'],
+    fact:'Во время посадки топлива у «Игла» оставалось меньше чем на минуту полёта. Армстронг вручную увёл модуль от поля крупных валунов и нашёл ровное место.' },
+  { id:'lrrr', zone:'moon', name:'Лазерный отражатель', en:'Lunar Laser Ranging Retroreflector', year:1969, build:buildLRRR, size:1.9,
+    launch:'1969 и 1971 (Аполлоны 11, 14, 15)', where:'Три места посадки «Аполлонов»', mass:'Панель 46 × 46 см, 100 призм', status:'active', statusText:'Работает без питания больше 55 лет',
+    story:'Это просто панель со стеклянными призмами, но она работает уже больше полувека, без батарей и ремонта. Обсерватории на Земле посылают к Луне лазерный импульс. Призмы отражают его точно обратно, и по времени полёта света (около 2,5 секунды туда и обратно) учёные вычисляют расстояние до Луны с точностью до миллиметров.',
+    learned:['Луна удаляется от Земли примерно на 3,8 см в год','Внутри Луны есть жидкое или частично расплавленное ядро','Теория относительности Эйнштейна прошла ещё одну очень точную проверку'],
+    fact:'Такая призма отражает свет туда, откуда он пришёл, под каким бы углом он ни падал. По тому же принципу работают катафоты на велосипеде.' },
+  { id:'lrv', zone:'moon', name:'Лунный ровер', en:'Lunar Roving Vehicle', year:1971, build:buildLRV, size:2.9,
+    launch:'26 июля 1971 (Аполлон-15)', where:'Места посадки Аполлонов 15, 16 и 17', mass:'210 кг', status:'done', statusText:'Три ровера припаркованы на Луне',
+    story:'Лунный электромобиль работал от батарей и складывался, чтобы поместиться в бок лунного модуля. С ним астронавты уезжали от корабля на километры, а не на сотни метров. Все три ровера остались на Луне. Экипажи парковали их так, чтобы камера ровера сняла взлёт модуля.',
+    learned:['На «Аполлоне-15» нашли «камень Генезиса», кусок древней лунной коры возрастом больше 4 млрд лет','Экипаж «Аполлона-17» нашёл оранжевый грунт, след древних вулканических извержений','За три миссии роверы проехали около 90 км и помогли собрать сотни килограммов образцов'],
+    fact:'На «Аполлоне-17» у ровера отломился кусок крыла над колесом. Астронавты починили его скотчем и ламинированными картами, иначе их засыпало бы лунной пылью.' },
+
+  { id:'viking1', zone:'mars', name:'Викинг-1', en:'Viking 1 Lander', year:1976, build:buildViking, size:2.7,
+    launch:'20 августа 1975', where:'Равнина Хриса, Марс', mass:'≈ 600 кг', status:'done', statusText:'Работал до ноября 1982 года',
+    story:'Первый американский аппарат, который успешно сел на Марс 20 июля 1976 года и долго там работал. Он передал первые цветные снимки с поверхности и больше шести лет сообщал марсианскую погоду. На борту была маленькая биологическая лаборатория для поиска жизни в грунте.',
+    learned:['Небо Марса желтовато-розовое из-за пыли в воздухе','В марсианском грунте много железа, поэтому планета красная','Опыты по поиску жизни дали странные результаты, о них спорят до сих пор'],
+    fact:'Перед полётом посадочный модуль почти двое суток прогревали в печи, чтобы убить земных микробов и не занести их на Марс.' },
+  { id:'sojourner', zone:'mars', name:'Соджорнер', en:'Sojourner · Mars Pathfinder', year:1997, build:buildSojourner, size:1.5,
+    launch:'4 декабря 1996', where:'Долина Арес, Марс', mass:'10,6 кг', status:'done', statusText:'Связь потеряна в сентябре 1997',
+    story:'Самый первый марсоход размером с микроволновку. Он прилетел на станции «Марс Пасфайндер», которая села, отскакивая от грунта в огромных надувных подушках. Соджорнер рассчитывали на неделю работы, а он ездил почти три месяца.',
+    learned:['Камни на месте посадки принесли мощные древние потоки воды','Галька и окатанные камни говорят о наводнениях в прошлом Марса','Колёсный робот может работать на Марсе: по этой схеме строили все следующие марсоходы'],
+    fact:'Марсоход назван в честь Соджорнер Трут, которая боролась за права человека. Это имя предложила 12-летняя школьница, победившая в конкурсе.' },
+  { id:'opportunity', zone:'mars', name:'Оппортьюнити', en:'Opportunity · Mars Exploration Rover B', year:2004, build:buildMER, size:2.3,
+    launch:'7 июля 2003', where:'Плато Меридиана, Марс', mass:'185 кг', status:'done', statusText:'Замолчал в 2018 году',
+    story:'Два одинаковых марсохода, Спирит и Оппортьюнити, сели на разные стороны Марса в январе 2004 года. Их рассчитывали на 90 марсианских суток. Спирит проработал больше шести лет, а Оппортьюнити почти 15 лет и проехал 45 км, больше марафонской дистанции. Его остановила глобальная пылевая буря, закрывшая Солнце над его солнечными панелями.',
+    learned:['Найдены «черничины», маленькие шарики гематита, которые образуются в воде','В кратере Индевор нашли жилы гипса: его оставила вода, текущая сквозь трещины','Спирит, застряв в песке, случайно раскопал почти чистый кремнезём, след горячих источников'],
+    fact:'Иногда ветер сдувал пыль с солнечных панелей, и марсоход получал больше энергии. Инженеры называли такие порывы «очищающими событиями».' },
+  { id:'phoenix', zone:'mars', name:'Феникс', en:'Phoenix Mars Lander', year:2008, build:buildPhoenix, size:2.9,
+    launch:'4 августа 2007', where:'Северные равнины у полюса Марса', mass:'350 кг', status:'done', statusText:'Замёрз полярной зимой 2008 года',
+    story:'Феникс сел ближе всех к северному полюсу Марса, чтобы найти лёд. Он прокопал грунт ковшом и увидел белые кусочки, которые за несколько дней испарились. Это был водяной лёд. Потом наступила полярная зима, панели покрылись инеем, и аппарат замолчал навсегда.',
+    learned:['Под тонким слоем грунта у полюса лежит водяной лёд','Из марсианских облаков падает снег, который испаряется, не долетая до земли','В грунте нашли перхлораты, соли, важные для будущих экспедиций людей'],
+    fact:'На борту Феникса есть мини-диск с фантастическими рассказами о Марсе и именами 250 тысяч человек. Это маленькая библиотека для будущих марсиан.' },
+  { id:'curiosity', zone:'mars', name:'Кьюриосити', en:'Curiosity · Mars Science Laboratory', year:2012, build:() => buildBigRover(false), size:3.0,
+    launch:'26 ноября 2011', where:'Кратер Гейл, Марс', mass:'899 кг', status:'active', statusText:'Поднимается на гору Шарп',
+    story:'Марсоход размером с автомобиль. Для подушек он слишком тяжёлый, поэтому его опустили на тросах с «небесного крана», летающей платформы на ракетных двигателях. Кьюриосити питается от ядерной батареи, а не от солнечных панелей, и пыль ему не мешает. Он медленно поднимается по склону горы Шарп и читает её слои, как страницы книги.',
+    learned:['В кратере Гейл миллиарды лет назад было озеро с водой, пригодной для жизни','Найдены органические молекулы, «кирпичики», из которых может строиться жизнь','Количество метана в воздухе Марса меняется по сезонам'],
+    fact:'В свою первую годовщину на Марсе, 5 августа 2013 года, Кьюриосити сыграл себе мелодию «С днём рождения», вибрируя прибором для анализа грунта.' },
+  { id:'insight', zone:'mars', name:'ИнСайт', en:'InSight Lander', year:2018, build:buildInSight, size:3.1,
+    launch:'5 мая 2018', where:'Равнина Элизий, Марс', mass:'358 кг', status:'done', statusText:'Миссия завершена в декабре 2022',
+    story:'ИнСайт не ездил, а «слушал» Марс. Манипулятором он поставил на грунт чуткий сейсмометр под защитным колпаком и четыре года записывал марсотрясения. Со временем панели покрылись пылью, энергии стало не хватать, и в декабре 2022 года аппарат вышел на связь в последний раз.',
+    learned:['Записано больше 1300 марсотрясений','Измерено ядро Марса: оно жидкое и больше, чем ожидали','Узнали толщину марсианской коры и то, из каких слоёв состоят недра планеты'],
+    fact:'Сейсмометр ИнСайта слышал удары метеоритов о Марс. Потом орбитальный зонд нашёл и сфотографировал эти свежие кратеры.' },
+  { id:'perseverance', zone:'mars', name:'Персеверанс и Индженьюити', en:'Perseverance Rover & Ingenuity Helicopter', year:2021, build:() => buildBigRover(true), size:3.2,
+    launch:'30 июля 2020', where:'Кратер Езеро, Марс', mass:'1025 кг и 1,8 кг (вертолёт)', status:'active', statusText:'Марсоход работает, вертолёт завершил полёты',
+    story:'Персеверанс исследует дно древнего озера в кратере Езеро, куда когда-то впадала река. Он сверлит камни и запечатывает образцы в металлические пробирки, чтобы в будущем их доставили на Землю. С ним прилетел вертолёт Индженьюити: он совершил первый в истории управляемый полёт на другой планете.',
+    learned:['В камне «Шейава-Фоллс» нашли пятна, которые могут быть следами древней микробной жизни. Учёные это проверяют','Прибор MOXIE впервые получил кислород из марсианского углекислого газа','Вертолёт доказал, что летать можно даже в разреженном воздухе Марса: 72 полёта вместо запланированных пяти'],
+    fact:'Индженьюити несёт кусочек ткани с крыла самолёта братьев Райт, первого самолёта, поднявшегося в воздух на Земле.' },
+
+  { id:'pioneer10', zone:'deep', name:'Пионер-10', en:'Pioneer 10', year:1972, build:buildPioneer, size:3.0, float:true,
+    launch:'2 марта 1972', where:'Больше 130 а.е. от Солнца, летит к Альдебарану', mass:'258 кг', status:'silent', statusText:'Последний сигнал в январе 2003',
+    story:'Пионер-10 первым пролетел через пояс астероидов и первым долетел до Юпитера в декабре 1973 года. Учёные боялись, что астероиды его разобьют, но путь оказался безопасным. Сейчас он летит молча и примерно через два миллиона лет окажется возле звезды Альдебаран.',
+    learned:['Пояс астероидов можно безопасно пересечь','У Юпитера очень сильные радиационные пояса, поэтому следующие аппараты строили с защитой','Получены первые снимки Юпитера крупным планом'],
+    fact:'На борту закреплена позолоченная пластинка с рисунком мужчины и женщины и картой, которая показывает, откуда прилетел аппарат. Это послание для тех, кто его когда-нибудь найдёт.' },
+  { id:'voyager2', zone:'deep', name:'Вояджер-2', en:'Voyager 2', year:1977, build:buildVoyager, size:3.4, float:true,
+    launch:'20 августа 1977', where:'Межзвёздное пространство, около 143 а.е.', mass:'≈ 720 кг', status:'active', statusText:'На связи, работают несколько приборов',
+    story:'Вояджер-2 — единственный аппарат, который побывал у всех четырёх планет-гигантов: Юпитера, Сатурна, Урана и Нептуна. Редкое расположение планет, которое случается примерно раз в 175 лет, позволило облететь их одну за другой. В 2018 году он вышел в межзвёздное пространство.',
+    learned:['Получены первые и пока единственные снимки Урана и Нептуна вблизи','Открыты новые спутники и кольца у Урана и Нептуна','На спутнике Нептуна Тритоне бьют азотные гейзеры'],
+    fact:'На обоих Вояджерах есть Золотая пластинка: диск со звуками Земли, музыкой и приветствиями на 55 языках, в том числе на русском.' },
+  { id:'voyager1', zone:'deep', name:'Вояджер-1', en:'Voyager 1', year:1977, build:buildVoyager, size:3.4, float:true,
+    launch:'5 сентября 1977', where:'Межзвёздное пространство, около 172 а.е.', mass:'≈ 720 кг', status:'active', statusText:'На связи, самый далёкий аппарат',
+    story:'Вояджер-1 — самый далёкий от Земли предмет, сделанный людьми. Он изучил Юпитер и Сатурн, а в 2012 году первым пересёк гелиопаузу, границу «пузыря» солнечного ветра. За ней начинается межзвёздное пространство. Ядерная батарея слабеет, поэтому инженеры по очереди выключают приборы, чтобы аппарат продолжал работать.',
+    learned:['На спутнике Юпитера Ио нашли действующие вулканы, первые за пределами Земли','У спутника Сатурна Титана плотная атмосфера','Измерено, какая плазма и какие поля окружают Солнечную систему снаружи'],
+    fact:'В 1990 году Вояджер-1 обернулся и сфотографировал Землю с расстояния 6 млрд км. На снимке «Бледная голубая точка» наша планета занимает меньше пикселя. Примерно в ноябре 2026 года он окажется в одних световых сутках от Земли.' },
+  { id:'newhorizons', zone:'deep', name:'Нью Хорайзонс', en:'New Horizons', year:2006, build:buildNewHorizons, size:2.8, float:true,
+    launch:'19 января 2006', where:'Пояс Койпера, больше 60 а.е.', mass:'478 кг', status:'active', statusText:'На связи, летит за Плутоном',
+    story:'Нью Хорайзонс летел к Плутону девять с половиной лет и в июле 2015 года пронёсся мимо него, сделав первые подробные снимки. Потом он посетил Аррокот, маленький ледяной объект пояса Койпера. Это самое далёкое и самое древнее тело, которое люди видели вблизи.',
+    learned:['На Плутоне есть огромное «сердце», равнина из азотного льда','Ледяные горы Плутона по высоте похожи на Альпы','Аррокот похож на снеговика: два комка мягко слиплись, когда рождалась Солнечная система'],
+    fact:'На борту летит щепотка праха Клайда Томбо, астронома, который открыл Плутон в 1930 году.' }
+];
+EX.forEach((e, i) => { e.i = i; e.num = String(i + 1).padStart(2, '0'); e.z0 = ZONES.find(z => z.id === e.zone); });
+
+/* ---------- UI scaffolding that works even without WebGL ---------- */
+const controlsEl = $('#controls');
+controlsEl.innerHTML = isTouch
+  ? `<span class="k"><kbd>Джойстик</kbd></span><span>идти (левая часть экрана)</span>
+     <span class="k"><kbd>Свайп</kbd></span><span>осмотреться</span>
+     <span class="k"><kbd>Тап</kbd></span><span>открыть карточку экспоната</span>`
+  : `<span class="k"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></span><span>идти, со стрелками можно поворачивать</span>
+     <span class="k"><kbd>Мышь</kbd></span><span>зажми и тяни, чтобы осмотреться</span>
+     <span class="k"><kbd>Shift</kbd></span><span>бежать</span>
+     <span class="k"><kbd>E</kbd><kbd>клик</kbd></span><span>открыть карточку экспоната</span>
+     <span class="k"><kbd>K</kbd></span><span>каталог всех аппаратов</span>`;
+
+let visited = new Set();
+try { visited = new Set(JSON.parse(localStorage.getItem('nasa-museum-visited') || '[]')); } catch (e) {}
+const ticksEl = $('#ticks');
+ticksEl.innerHTML = EX.map(e => `<span style="--tc:${e.z0.css}" title="${e.name}"></span>`).join('');
+function renderPassport() {
+  [...ticksEl.children].forEach((s, i) => s.classList.toggle('on', visited.has(EX[i].id)));
+  $('#pcount').textContent = `${visited.size} / ${EX.length}`;
+}
+renderPassport();
+
+let THREE_OK = !!window.THREE;
+let renderer;
+if (THREE_OK) {
+  try { renderer = new THREE.WebGLRenderer({ canvas: $('#c'), antialias: true, powerPreference: 'high-performance' }); }
+  catch (e) { THREE_OK = false; }
+}
+if (!THREE_OK) {
+  const p = document.createElement('p'); p.className = 'err';
+  p.textContent = 'Этот браузер не смог запустить 3D-графику (WebGL). Открой каталог, чтобы прочитать про все аппараты, или попробуй другой браузер.';
+  $('#btnEnter').before(p);
+}
+
+/* ---------- fonts before drawing canvas labels ---------- */
+try {
+  await Promise.race([
+    Promise.all(['700 64px Unbounded', '600 32px "JetBrains Mono"', '500 32px "Golos Text"'].map(f => document.fonts.load(f))),
+    new Promise(r => setTimeout(r, 2500))
+  ]);
+} catch (e) {}
+
+/* ---------- three.js setup ---------- */
+let scene, camera, pickMeshes = [], clock;
+const V3 = (x, y, z) => new THREE.Vector3(x, y, z);
+const UP = THREE_OK ? V3(0, 1, 0) : null;
+let M = {};
+const START_Z = 9;
+let END_Z = 0;
+
+if (THREE_OK) {
+  renderer.setPixelRatio(Math.min(devicePixelRatio, isTouch ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x03040a);
+  camera = new THREE.PerspectiveCamera(70, 1, 0.05, 1500);
+  camera.rotation.order = 'YXZ';
+  clock = new THREE.Clock();
+  buildEnvironment();
+  buildMaterials();
+  buildHall();
+  buildSky();
+  resize();
+  addEventListener('resize', resize);
+}
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = w < h ? 78 : 70;
+  camera.updateProjectionMatrix();
+}
+
+function rng(seed) { return function () { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+
+function buildEnvironment() {
+  // soft studio reflections so the gold foil and aluminium read as metal
+  const pm = new THREE.PMREMGenerator(renderer);
+  const s = new THREE.Scene();
+  const geo = new THREE.SphereGeometry(50, 32, 16);
+  const pos = geo.attributes.position, cols = [];
+  for (let i = 0; i < pos.count; i++) {
+    const t = Math.min(1, Math.max(0, (pos.getY(i) / 50 + 0.3) / 1.3));
+    cols.push(0.06 + t * 0.5, 0.055 + t * 0.55, 0.06 + t * 0.62);
+  }
+  geo.setAttribute('color', new THREE.Float32BufferAttribute(cols, 3));
+  s.add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide })));
+  const lamp = (w, h, d, x, y, z, k) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshBasicMaterial({ color: new THREE.Color(k, k, k * 0.95) })); m.position.set(x, y, z); s.add(m); };
+  lamp(30, 1, 18, 0, 40, 0, 4);
+  lamp(1, 12, 24, 42, 10, 0, 2);
+  lamp(1, 8, 16, -42, 6, 10, 1.2);
+  scene.environment = pm.fromScene(s, 0.03).texture;
+  pm.dispose();
+}
+
+function std(color, metalness, roughness, extra) { return new THREE.MeshStandardMaterial(Object.assign({ color, metalness, roughness }, extra || {})); }
+function buildMaterials() {
+  M = {
+    gold: std(0xd9a441, 0.92, 0.3), foilDark: std(0x9c7424, 0.85, 0.45), silver: std(0xcdd2da, 0.92, 0.26),
+    alu: std(0xa9aeb5, 0.85, 0.38), white: std(0xe8e6df, 0.05, 0.55), lightGray: std(0xbfc2c4, 0.2, 0.6),
+    dark: std(0x2b2e34, 0.55, 0.5), black: std(0x121418, 0.3, 0.6), panel: std(0x1b2c62, 0.75, 0.2),
+    seat: std(0x6c7a88, 0.2, 0.8), glass: std(0xbfd4ff, 1.0, 0.04), mesh: std(0x9a9a92, 0.75, 0.55),
+    carbon: std(0x3a3c40, 0.4, 0.45), pedestal: std(0x1a1e27, 0.65, 0.42)
+  };
+  M.dishWhite = std(0xeeece6, 0.05, 0.5, { side: THREE.DoubleSide });
+  M.dishMesh = std(0xc8ccd0, 0.85, 0.35, { side: THREE.DoubleSide });
+}
+
+/* ---------- primitive helpers ---------- */
+function add(mesh, x, y, z, p) { mesh.position.set(x || 0, y || 0, z || 0); if (p) p.add(mesh); return mesh; }
+function box(w, h, d, mat, x, y, z, p) { return add(new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat), x, y, z, p); }
+function cyl(rt, rb, h, seg, mat, x, y, z, p) { return add(new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat), x, y, z, p); }
+function sph(r, mat, x, y, z, p) { return add(new THREE.Mesh(new THREE.SphereGeometry(r, 20, 14), mat), x, y, z, p); }
+function rod(a, b, r, mat, p, seg) {
+  const A = V3(...a), B = V3(...b), d = B.clone().sub(A), len = d.length();
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(r, r, len, seg || 8), mat);
+  m.position.copy(A).addScaledVector(d, 0.5);
+  m.quaternion.setFromUnitVectors(UP, d.normalize());
+  if (p) p.add(m);
+  return m;
+}
+function dish(R, depth, mat) {
+  const pts = [];
+  for (let i = 0; i <= 18; i++) { const r = R * i / 18; pts.push(new THREE.Vector2(r, depth * (r / R) ** 2)); }
+  return new THREE.Mesh(new THREE.LatheGeometry(pts, 40), mat);
+}
+function wheel(r, w, x, y, z, p, mat, hub) {
+  const t = cyl(r, r, w, 22, mat || M.alu, x, y, z, p); t.rotation.x = PI / 2;
+  const tread = cyl(r * 1.015, r * 1.015, w * 0.4, 22, M.dark, x, y, z, p); tread.rotation.x = PI / 2;
+  const h = cyl(r * 0.38, r * 0.38, w * 1.08, 14, hub || M.dark, x, y, z, p); h.rotation.x = PI / 2;
+  return t;
+}
+const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+
+/* ---------- spacecraft models (simplified, built from primitives) ---------- */
+function buildSurveyor() {
+  const g = new THREE.Group();
+  rod([0, 0.4, 0], [0, 2.5, 0], 0.03, M.silver, g);
+  const pts = [0, 1, 2].map(i => { const a = i * 2 * PI / 3; return [Math.cos(a) * 0.7, 0.55, Math.sin(a) * 0.7]; });
+  pts.forEach((p, i) => {
+    const q = pts[(i + 1) % 3], a = i * 2 * PI / 3;
+    rod(p, q, 0.025, M.silver, g);
+    rod(p, [0, 1.6, 0], 0.02, M.silver, g);
+    const foot = [Math.cos(a) * 1.55, 0.06, Math.sin(a) * 1.55];
+    rod(p, foot, 0.035, M.silver, g);
+    rod([Math.cos(a) * 0.3, 0.8, Math.sin(a) * 0.3], foot, 0.02, M.silver, g);
+    cyl(0.16, 0.2, 0.08, 16, M.white, foot[0], 0.04, foot[2], g);
+    const b = a + PI / 3;
+    sph(0.17, M.white, Math.cos(b) * 0.42, 0.72, Math.sin(b) * 0.42, g);
+  });
+  box(0.35, 0.3, 0.3, M.white, 0.25, 0.98, -0.2, g);
+  box(0.3, 0.25, 0.3, M.white, -0.3, 0.92, 0.15, g);
+  cyl(0.08, 0.22, 0.3, 16, M.dark, 0, 0.38, 0, g);
+  box(0.95, 0.02, 0.65, M.panel, 0.32, 2.42, 0, g).rotation.z = -0.5;
+  box(0.6, 0.02, 0.6, M.silver, -0.28, 2.3, 0, g).rotation.z = 0.6;
+  cyl(0.07, 0.07, 0.4, 12, M.white, 0.45, 1.15, 0.35, g);
+  cyl(0.09, 0.09, 0.08, 12, M.dark, 0.45, 1.38, 0.35, g);
+  rod([0.4, 0.85, -0.45], [1.25, 0.35, -0.85], 0.025, M.silver, g);
+  box(0.14, 0.1, 0.16, M.dark, 1.27, 0.3, -0.87, g);
+  return g;
+}
+
+function buildLM() {
+  const g = new THREE.Group();
+  cyl(1.15, 1.15, 1.05, 8, M.gold, 0, 1.25, 0, g).rotation.y = PI / 8;
+  cyl(1.18, 1.18, 0.06, 8, M.foilDark, 0, 1.8, 0, g).rotation.y = PI / 8;
+  cyl(1.18, 1.18, 0.06, 8, M.dark, 0, 0.72, 0, g).rotation.y = PI / 8;
+  cyl(0.28, 0.5, 0.55, 20, M.dark, 0, 0.45, 0, g);
+  box(0.6, 0.28, 0.55, M.foilDark, 0.3, 1.97, 0.2, g);
+  box(0.45, 0.2, 0.4, M.white, -0.45, 1.93, -0.3, g);
+  for (let k = 0; k < 4; k++) {
+    const a = k * PI / 2 + PI / 4, c = Math.cos(a), s = Math.sin(a);
+    const top = [c * 1.05, 1.55, s * 1.05], foot = [c * 2.05, 0.1, s * 2.05];
+    rod(top, foot, 0.06, M.silver, g);
+    rod([c * 1.1, 0.8, s * 1.1], lerp3(top, foot, 0.65), 0.035, M.silver, g);
+    const pc = [-s, 0, c];
+    rod([c * 1.08 + pc[0] * 0.7, 0.85, s * 1.08 + pc[2] * 0.7], lerp3(top, foot, 0.65), 0.03, M.silver, g);
+    cyl(0.32, 0.35, 0.08, 20, M.silver, foot[0], 0.05, foot[2], g);
+    if (k === 0) {
+      const off = 0.17;
+      rod([top[0] + pc[0] * off, top[1], top[2] + pc[2] * off], [foot[0] + pc[0] * off, 0.15, foot[2] + pc[2] * off], 0.02, M.silver, g);
+      rod([top[0] - pc[0] * off, top[1], top[2] - pc[2] * off], [foot[0] - pc[0] * off, 0.15, foot[2] - pc[2] * off], 0.02, M.silver, g);
+      for (let j = 1; j < 8; j++) {
+        const m = lerp3(top, [foot[0], 0.15, foot[2]], j / 8);
+        rod([m[0] + pc[0] * off, m[1], m[2] + pc[2] * off], [m[0] - pc[0] * off, m[1], m[2] - pc[2] * off], 0.015, M.silver, g);
+      }
+      const pl = box(0.3, 0.2, 0.02, M.silver, ...lerp3(top, foot, 0.12), g);
+      pl.lookAt(c * 5, pl.position.y, s * 5);
+    }
+  }
+  return g;
+}
+
+function buildLRRR() {
+  const g = new THREE.Group();
+  box(1.05, 0.05, 0.75, M.silver, 0, 0.025, 0, g);
+  const panel = new THREE.Group(); panel.position.set(0, 0.55, 0); panel.rotation.x = -0.45; g.add(panel);
+  box(1.2, 0.1, 1.2, M.silver, 0, 0, 0, panel);
+  const pg = new THREE.CylinderGeometry(0.048, 0.048, 0.04, 12);
+  for (let i = 0; i < 10; i++) for (let j = 0; j < 10; j++) {
+    const m = new THREE.Mesh(pg, M.glass); m.position.set(-0.54 + i * 0.12, 0.06, -0.54 + j * 0.12); panel.add(m);
+  }
+  for (const x of [-0.45, 0.45]) {
+    rod([x, 0.05, -0.25], [x, 0.78, -0.48], 0.025, M.silver, g);
+    rod([x, 0.05, 0.25], [x, 0.36, 0.5], 0.025, M.silver, g);
+  }
+  return g;
+}
+
+function buildLRV() {
+  const g = new THREE.Group();
+  box(2.4, 0.1, 1.15, M.silver, 0, 0.55, 0, g);
+  for (const x of [-0.95, 0.95]) for (const z of [-0.72, 0.72]) {
+    wheel(0.36, 0.2, x, 0.36, z, g, M.mesh, M.dark);
+    const f = new THREE.Mesh(new THREE.CylinderGeometry(0.43, 0.43, 0.25, 20, 1, true, PI / 2, PI), std(0x8d8f93, 0.6, 0.5, { side: THREE.DoubleSide }));
+    f.rotation.x = PI / 2; add(f, x, 0.36, z, g);
+  }
+  for (const z of [-0.3, 0.3]) {
+    box(0.45, 0.06, 0.45, M.seat, -0.1, 0.75, z, g);
+    box(0.06, 0.45, 0.45, M.seat, -0.33, 0.97, z, g);
+  }
+  rod([0.35, 0.6, 0], [0.45, 1.05, 0], 0.03, M.silver, g);
+  box(0.22, 0.25, 0.08, M.dark, 0.47, 1.12, 0, g).rotation.z = 0.3;
+  rod([1.0, 0.6, 0.35], [1.0, 1.6, 0.35], 0.025, M.silver, g);
+  const d = dish(0.45, 0.15, M.dishMesh); d.position.set(1.0, 1.62, 0.35); d.rotation.z = -0.6; g.add(d);
+  rod([1.15, 0.6, -0.2], [1.15, 0.95, -0.2], 0.02, M.silver, g);
+  box(0.28, 0.14, 0.18, M.white, 1.2, 1.0, -0.2, g);
+  cyl(0.0, 0.05, 0.5, 8, M.silver, 0.95, 1.05, -0.42, g);
+  box(0.45, 0.5, 1.0, std(0x777b80, 0.6, 0.5), -1.15, 0.85, 0, g);
+  box(0.4, 0.2, 0.6, M.white, 0.85, 0.7, 0, g);
+  return g;
+}
+
+function buildViking() {
+  const g = new THREE.Group();
+  cyl(0.95, 0.95, 0.32, 6, M.silver, 0, 0.85, 0, g);
+  for (let k = 0; k < 3; k++) {
+    const a = k * 2 * PI / 3 + PI / 6, c = Math.cos(a), s = Math.sin(a);
+    const top = [c * 0.85, 0.75, s * 0.85], foot = [c * 1.55, 0.06, s * 1.55];
+    rod(top, foot, 0.05, M.silver, g);
+    rod([c * 0.6, 0.7, s * 0.6], lerp3(top, foot, 0.6), 0.03, M.silver, g);
+    cyl(0.2, 0.24, 0.07, 16, M.silver, foot[0], 0.04, foot[2], g);
+  }
+  for (const x of [-0.35, 0.35]) {
+    box(0.4, 0.38, 0.32, M.white, x, 1.2, -0.5, g);
+    for (let f = -1; f <= 1; f++) box(0.02, 0.36, 0.42, M.lightGray, x + f * 0.12, 1.2, -0.5, g);
+  }
+  for (const x of [-0.25, 0.25]) {
+    cyl(0.08, 0.08, 0.45, 14, M.white, x, 1.25, 0.55, g);
+    sph(0.09, M.dark, x, 1.5, 0.55, g);
+  }
+  rod([0.55, 1.0, 0.1], [0.55, 1.55, 0.1], 0.025, M.silver, g);
+  const d = dish(0.45, 0.12, M.dishWhite); d.position.set(0.55, 1.6, 0.1); d.rotation.z = 0.7; g.add(d);
+  rod([-0.6, 1.0, 0.3], [-0.6, 1.75, 0.3], 0.02, M.silver, g);
+  rod([-0.6, 1.75, 0.3], [-0.95, 1.8, 0.3], 0.015, M.silver, g);
+  box(0.08, 0.06, 0.06, M.dark, -0.98, 1.8, 0.3, g);
+  rod([0.3, 0.9, 0.6], [1.3, 0.4, 1.1], 0.035, M.silver, g);
+  box(0.14, 0.1, 0.12, M.dark, 1.33, 0.36, 1.12, g);
+  box(0.5, 0.18, 0.4, M.foilDark, 0, 1.1, 0.05, g);
+  return g;
+}
+
+function buildSojourner() {
+  const g = new THREE.Group();
+  box(0.62, 0.17, 0.46, M.gold, 0, 0.3, 0, g);
+  box(0.66, 0.025, 0.5, M.panel, 0, 0.4, 0, g);
+  for (const x of [-0.26, 0, 0.26]) for (const z of [-0.3, 0.3]) wheel(0.065, 0.08, x, 0.065, z, g, M.silver, M.dark);
+  for (const z of [-0.3, 0.3]) {
+    rod([0.05, 0.3, z * 0.8], [0.26, 0.065, z], 0.012, M.silver, g);
+    rod([0.05, 0.3, z * 0.8], [-0.13, 0.15, z], 0.012, M.silver, g);
+    rod([-0.13, 0.15, z], [0, 0.065, z], 0.012, M.silver, g);
+    rod([-0.13, 0.15, z], [-0.26, 0.065, z], 0.012, M.silver, g);
+  }
+  rod([-0.25, 0.42, 0.18], [-0.25, 0.85, 0.18], 0.006, M.silver, g);
+  sph(0.015, M.dark, -0.25, 0.86, 0.18, g);
+  box(0.04, 0.04, 0.06, M.dark, 0.32, 0.33, 0.08, g);
+  box(0.04, 0.04, 0.06, M.dark, 0.32, 0.33, -0.08, g);
+  cyl(0.03, 0.03, 0.12, 10, M.silver, -0.36, 0.25, 0, g).rotation.z = 0.5;
+  return g;
+}
+
+function buildMER() {
+  const g = new THREE.Group();
+  box(1.0, 0.32, 0.66, M.white, 0, 0.62, 0, g);
+  box(1.17, 0.02, 0.82, M.silver, 0, 0.795, 0, g);
+  box(1.15, 0.035, 0.8, M.panel, 0, 0.81, 0, g);
+  box(0.9, 0.03, 0.42, M.panel, 0.05, 0.8, 0.62, g);
+  box(0.9, 0.03, 0.42, M.panel, 0.05, 0.8, -0.62, g);
+  box(0.35, 0.03, 0.8, M.panel, -0.75, 0.8, 0, g);
+  rod([0.42, 0.82, 0.28], [0.42, 1.5, 0.28], 0.03, M.white, g);
+  box(0.12, 0.11, 0.38, M.white, 0.45, 1.55, 0.28, g);
+  box(0.03, 0.05, 0.05, M.black, 0.52, 1.56, 0.14, g);
+  box(0.03, 0.05, 0.05, M.black, 0.52, 1.56, 0.42, g);
+  rod([-0.15, 0.82, -0.25], [-0.15, 0.98, -0.25], 0.02, M.silver, g);
+  cyl(0.14, 0.14, 0.03, 16, M.silver, -0.15, 1.02, -0.25, g).rotation.z = 0.8;
+  rod([-0.4, 0.82, -0.3], [-0.4, 1.15, -0.3], 0.01, M.silver, g);
+  for (const x of [-0.5, 0.02, 0.5]) for (const z of [-0.5, 0.5]) wheel(0.13, 0.14, x, 0.13, z, g, M.alu, M.dark);
+  for (const z of [-0.5, 0.5]) {
+    rod([0.1, 0.55, z * 0.8], [0.5, 0.13, z], 0.02, M.silver, g);
+    rod([0.1, 0.55, z * 0.8], [-0.25, 0.35, z], 0.02, M.silver, g);
+    rod([-0.25, 0.35, z], [0.02, 0.13, z], 0.02, M.silver, g);
+    rod([-0.25, 0.35, z], [-0.5, 0.13, z], 0.02, M.silver, g);
+  }
+  rod([0.52, 0.55, -0.15], [0.75, 0.45, -0.15], 0.02, M.silver, g);
+  rod([0.75, 0.45, -0.15], [0.75, 0.45, 0.2], 0.02, M.silver, g);
+  box(0.12, 0.12, 0.12, M.silver, 0.78, 0.42, 0.22, g);
+  return g;
+}
+
+function landerLegs(g, rTop, yTop, rFoot) {
+  for (let k = 0; k < 3; k++) {
+    const a = k * 2 * PI / 3 + PI / 2, c = Math.cos(a), s = Math.sin(a);
+    const top = [c * rTop, yTop, s * rTop], foot = [c * rFoot, 0.06, s * rFoot];
+    rod(top, foot, 0.045, M.silver, g);
+    rod([c * rTop * 0.5, yTop, s * rTop * 0.5], lerp3(top, foot, 0.7), 0.025, M.silver, g);
+    cyl(0.15, 0.18, 0.06, 16, M.silver, foot[0], 0.03, foot[2], g);
+  }
+}
+
+function buildPhoenix() {
+  const g = new THREE.Group();
+  cyl(0.62, 0.62, 0.25, 10, M.gold, 0, 0.85, 0, g);
+  cyl(0.65, 0.65, 0.04, 10, M.white, 0, 0.99, 0, g);
+  for (const sx of [-1, 1]) {
+    cyl(0.85, 0.85, 0.03, 10, M.panel, sx * 1.5, 0.95, 0, g);
+    cyl(0.87, 0.87, 0.015, 10, M.silver, sx * 1.5, 0.93, 0, g);
+    rod([sx * 0.6, 0.95, 0], [sx * 0.66, 0.95, 0], 0.04, M.silver, g);
+  }
+  landerLegs(g, 0.55, 0.78, 0.95);
+  rod([0.3, 1.0, 0.35], [0.3, 1.85, 0.35], 0.025, M.white, g);
+  box(0.14, 0.18, 0.26, M.white, 0.3, 1.95, 0.35, g);
+  box(0.03, 0.06, 0.06, M.black, 0.38, 1.95, 0.3, g);
+  rod([-0.35, 1.0, -0.3], [-0.35, 1.9, -0.3], 0.015, M.silver, g);
+  cyl(0.01, 0.01, 0.12, 6, M.gold, -0.35, 1.97, -0.3, g);
+  rod([0.45, 1.0, -0.2], [1.05, 1.25, -0.6], 0.035, M.silver, g);
+  rod([1.05, 1.25, -0.6], [1.3, 0.35, -0.7], 0.03, M.silver, g);
+  box(0.14, 0.1, 0.16, M.alu, 1.32, 0.3, -0.7, g);
+  box(0.35, 0.12, 0.25, M.silver, -0.2, 1.06, 0.2, g);
+  return g;
+}
+
+function buildInSight() {
+  const g = new THREE.Group();
+  cyl(0.6, 0.6, 0.25, 10, M.gold, 0, 0.75, 0, g);
+  cyl(0.7, 0.7, 0.2, 10, M.white, 0, 0.95, 0, g);
+  for (const sx of [-1, 1]) {
+    cyl(1.05, 1.05, 0.03, 10, M.panel, sx * 1.8, 1.0, 0, g);
+    cyl(1.07, 1.07, 0.015, 10, M.silver, sx * 1.8, 0.98, 0, g);
+    rod([sx * 0.68, 1.0, 0], [sx * 0.76, 1.0, 0], 0.05, M.silver, g);
+  }
+  landerLegs(g, 0.6, 0.7, 1.0);
+  rod([0.45, 1.05, 0.3], [0.9, 1.4, 0.9], 0.035, M.silver, g);
+  rod([0.9, 1.4, 0.9], [0.9, 0.75, 1.35], 0.03, M.silver, g);
+  box(0.12, 0.1, 0.12, M.dark, 0.9, 0.7, 1.36, g);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.34, 28, 12, 0, 2 * PI, 0, PI / 2), M.white);
+  add(dome, 0.35, 0.04, 1.7, g);
+  cyl(0.38, 0.42, 0.05, 28, M.foilDark, 0.35, 0.025, 1.7, g);
+  box(0.25, 0.25, 0.25, M.white, -0.55, 0.125, 1.35, g);
+  rod([-0.55, 0.2, 1.22], [-0.2, 0.7, 0.55], 0.01, M.dark, g);
+  for (const x of [-0.35, 0.35]) {
+    rod([x, 1.05, -0.35], [x, 1.35, -0.4], 0.015, M.silver, g);
+    box(0.18, 0.04, 0.05, M.dark, x, 1.37, -0.4, g);
+  }
+  return g;
+}
+
+function buildIngenuity() {
+  const g = new THREE.Group();
+  box(0.14, 0.14, 0.14, M.foilDark, 0, 0.22, 0, g);
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) rod([sx * 0.05, 0.16, sz * 0.05], [sx * 0.22, 0.0, sz * 0.22], 0.008, M.carbon, g);
+  rod([0, 0.29, 0], [0, 0.6, 0], 0.012, M.carbon, g);
+  const r1 = new THREE.Group(), r2 = new THREE.Group();
+  r1.position.y = 0.42; r2.position.y = 0.5;
+  box(1.2, 0.01, 0.08, M.carbon, 0, 0, 0, r1);
+  box(1.2, 0.01, 0.08, M.carbon, 0, 0, 0, r2);
+  r2.rotation.y = PI / 2;
+  g.add(r1, r2);
+  box(0.24, 0.012, 0.16, M.panel, 0, 0.61, 0, g);
+  g.userData.tick = (t, dt) => { r1.rotation.y += dt * 2.4; r2.rotation.y -= dt * 2.4; };
+  return g;
+}
+
+function buildBigRover(perseverance) {
+  const g = new THREE.Group();
+  box(1.75, 0.5, 1.05, M.white, 0, 1.0, 0, g);
+  box(1.8, 0.05, 1.1, M.lightGray, 0, 1.27, 0, g);
+  const r = new THREE.Group(); r.position.set(-1.1, 1.2, 0); r.rotation.z = 0.75; g.add(r);
+  cyl(0.22, 0.22, 0.65, 16, perseverance ? M.white : M.dark, 0, 0, 0, r);
+  for (let k = 0; k < 8; k++) {
+    const a = k * PI / 4;
+    const f = box(0.02, 0.6, 0.18, M.dark, Math.cos(a) * 0.3, 0, Math.sin(a) * 0.3, r);
+    f.rotation.y = PI / 2 - a;
+  }
+  rod([0.7, 1.28, 0.35], [0.7, 2.15, 0.35], 0.045, M.white, g);
+  box(0.28, 0.24, 0.5, M.white, 0.72, 2.25, 0.35, g);
+  cyl(0.07, 0.07, 0.04, 16, M.black, 0.87, 2.28, 0.35, g).rotation.z = PI / 2;
+  cyl(0.035, 0.035, 0.04, 12, M.black, 0.87, 2.2, 0.2, g).rotation.z = PI / 2;
+  cyl(0.035, 0.035, 0.04, 12, M.black, 0.87, 2.2, 0.5, g).rotation.z = PI / 2;
+  rod([-0.2, 1.28, -0.4], [-0.2, 1.5, -0.4], 0.03, M.silver, g);
+  cyl(0.22, 0.22, 0.04, 6, M.silver, -0.2, 1.52, -0.4, g).rotation.z = 0.5;
+  cyl(0.06, 0.06, 0.15, 12, M.silver, -0.6, 1.35, 0.4, g);
+  for (const x of [-0.8, 0, 0.82]) for (const z of [-0.78, 0.78]) wheel(0.26, 0.24, x, 0.26, z, g, M.alu, M.dark);
+  for (const z of [-0.78, 0.78]) {
+    rod([0.15, 0.95, z * 0.72], [0.82, 0.26, z], 0.04, M.silver, g);
+    rod([0.15, 0.95, z * 0.72], [-0.4, 0.6, z], 0.04, M.silver, g);
+    rod([-0.4, 0.6, z], [0, 0.26, z], 0.035, M.silver, g);
+    rod([-0.4, 0.6, z], [-0.8, 0.26, z], 0.035, M.silver, g);
+  }
+  rod([0.88, 0.95, -0.3], [1.25, 0.85, -0.3], 0.04, M.silver, g);
+  rod([1.25, 0.85, -0.3], [1.25, 0.85, 0.25], 0.04, M.silver, g);
+  box(0.25, 0.25, 0.25, M.silver, 1.3, 0.75, 0.3, g);
+  cyl(0.02, 0.02, 0.25, 8, M.dark, 1.3, 0.52, 0.3, g);
+  if (perseverance) {
+    box(0.4, 0.2, 0.6, M.silver, 0.65, 0.7, 0, g);
+    const ing = buildIngenuity(); ing.scale.setScalar(0.62); ing.position.set(0.2, 0, 1.75); g.add(ing);
+    g.userData.tick = ing.userData.tick;
+  }
+  return g;
+}
+
+function buildPioneer() {
+  const g = new THREE.Group(), a = new THREE.Group(); g.add(a);
+  a.add(dish(1.37, 0.42, M.dishWhite));
+  for (let k = 0; k < 3; k++) { const t = k * 2 * PI / 3; rod([Math.cos(t) * 1.25, 0.36, Math.sin(t) * 1.25], [0, 1.0, 0], 0.015, M.silver, a); }
+  cyl(0.06, 0.1, 0.18, 12, M.white, 0, 1.0, 0, a);
+  cyl(0.55, 0.55, 0.38, 6, M.gold, 0, -0.25, 0, a);
+  box(0.55, 0.3, 0.4, M.gold, 0.62, -0.25, 0, a);
+  for (const ang of [PI / 6, PI / 6 + 2 * PI / 3]) {
+    const c = Math.cos(ang), s = Math.sin(ang), start = [c * 0.5, -0.25, s * 0.5], end = [c * 2.2, -0.3, s * 2.2];
+    rod(start, end, 0.03, M.silver, a);
+    for (const t of [0.7, 0.92]) {
+      const m = lerp3(start, end, t), dx = c * 0.17, dz = s * 0.17;
+      rod([m[0] - dx, m[1], m[2] - dz], [m[0] + dx, m[1], m[2] + dz], 0.13, M.dark, a, 12);
+    }
+  }
+  const ma = PI / 6 + 4 * PI / 3;
+  rod([Math.cos(ma) * 0.5, -0.3, Math.sin(ma) * 0.5], [Math.cos(ma) * 3.4, -0.35, Math.sin(ma) * 3.4], 0.012, M.silver, a);
+  sph(0.07, M.white, Math.cos(ma) * 3.4, -0.35, Math.sin(ma) * 3.4, a);
+  a.rotation.x = 1.25;
+  return g;
+}
+
+function buildVoyager() {
+  const g = new THREE.Group(), a = new THREE.Group(); g.add(a);
+  a.add(dish(1.83, 0.5, M.dishWhite));
+  for (let k = 0; k < 4; k++) { const t = k * PI / 2 + PI / 4; rod([Math.cos(t) * 1.6, 0.4, Math.sin(t) * 1.6], [0, 1.1, 0], 0.015, M.silver, a); }
+  cyl(0.2, 0.2, 0.05, 20, M.white, 0, 1.12, 0, a);
+  cyl(0.85, 0.85, 0.45, 10, std(0x5a554e, 0.85, 0.35), 0, -0.32, 0, a);
+  cyl(0.87, 0.87, 0.05, 10, M.gold, 0, -0.1, 0, a);
+  sph(0.35, M.white, 0, -0.65, 0, a);
+  const rec = cyl(0.3, 0.3, 0.025, 36, M.gold, 0.86, -0.32, 0, a); rec.rotation.z = PI / 2;
+  const s0 = [-0.8, -0.4, 0], s1 = [-3.0, -0.6, 0];
+  rod(s0, s1, 0.03, M.silver, a);
+  for (const t of [0.55, 0.72, 0.89]) {
+    const m = lerp3(s0, s1, t);
+    rod([m[0] + 0.17, m[1] + 0.015, 0], [m[0] - 0.17, m[1] - 0.015, 0], 0.15, M.dark, a, 12);
+    for (let f = 0; f < 4; f++) { const fb = box(0.32, 0.4, 0.02, M.dark, m[0], m[1], 0, a); fb.rotation.x = f * PI / 4; }
+  }
+  rod([0.8, -0.4, 0.1], [2.8, -0.5, 0.1], 0.035, M.silver, a);
+  box(0.35, 0.3, 0.35, M.dark, 2.9, -0.45, 0.1, a);
+  cyl(0.08, 0.08, 0.5, 12, M.white, 3.0, -0.2, 0.25, a).rotation.z = PI / 2;
+  cyl(0.06, 0.06, 0.35, 12, M.white, 3.0, -0.2, -0.05, a).rotation.z = PI / 2;
+  box(0.2, 0.2, 0.2, M.gold, 1.6, -0.35, 0.1, a);
+  rod([0, -0.4, -0.8], [0.25, -0.55, -3.3], 0.012, M.silver, a);
+  sph(0.06, M.white, 0.25, -0.55, -3.3, a);
+  a.rotation.x = 1.2;
+  return g;
+}
+
+function buildNewHorizons() {
+  const g = new THREE.Group(), a = new THREE.Group(); g.add(a);
+  cyl(0.85, 0.85, 0.55, 3, M.gold, 0, 0, 0, a);
+  cyl(0.3, 0.4, 0.1, 16, M.silver, 0, 0.32, 0, a);
+  const d = dish(1.05, 0.3, M.dishWhite); d.position.y = 0.36; a.add(d);
+  cyl(0.05, 0.12, 0.25, 12, M.white, 0, 0.5, 0, a);
+  rod([0, -0.05, 0.75], [0, -0.05, 1.55], 0.16, M.dark, a, 14);
+  box(0.48, 0.02, 0.75, M.dark, 0, -0.05, 1.15, a);
+  box(0.02, 0.48, 0.75, M.dark, 0, -0.05, 1.15, a);
+  cyl(0.1, 0.1, 0.55, 16, M.white, -0.45, -0.1, -0.3, a).rotation.z = PI / 2;
+  box(0.25, 0.2, 0.3, M.silver, 0.45, -0.15, -0.3, a);
+  box(0.15, 0.15, 0.15, M.gold, 0.55, 0.12, 0.2, a);
+  a.rotation.x = 1.15;
+  return g;
+}
+
+/* ---------- canvas textures ---------- */
+function canvasTex(w, h, draw, repeat) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c);
+  t.encoding = THREE.sRGBEncoding;
+  t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+  if (repeat) { t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]); }
+  return t;
+}
+function roundRect(x, X, Y, W, H, r) {
+  x.beginPath(); x.moveTo(X + r, Y); x.arcTo(X + W, Y, X + W, Y + H, r); x.arcTo(X + W, Y + H, X, Y + H, r);
+  x.arcTo(X, Y + H, X, Y, r); x.arcTo(X, Y, X + W, Y, r); x.closePath();
+}
+function fitFont(x, text, weight, family, size, maxW, min) {
+  let fs = size; x.font = `${weight} ${fs}px ${family}`;
+  while (x.measureText(text).width > maxW && fs > min) { fs -= 3; x.font = `${weight} ${fs}px ${family}`; }
+  return fs;
+}
+function wrapText(x, text, X, Y, maxW, lh) {
+  const words = text.split(' '); let line = '';
+  for (const w of words) {
+    const test = line ? line + ' ' + w : w;
+    if (x.measureText(test).width > maxW && line) { x.fillText(line, X, Y); line = w; Y += lh; } else line = test;
+  }
+  if (line) x.fillText(line, X, Y);
+  return Y;
+}
+const F_DISP = 'Unbounded, "Arial Black", sans-serif', F_MONO = '"JetBrains Mono", Consolas, monospace', F_BODY = '"Golos Text", system-ui, sans-serif';
+
+function groundTex(kind, repeat) {
+  return canvasTex(512, 512, (x, w, h) => {
+    const r = rng(kind === 'moon' ? 11 : kind === 'mars' ? 23 : 37);
+    const base = { moon: '#5f5d59', mars: '#7f3f25', deep: '#0b0f1c', lobby: '#14171f' }[kind];
+    x.fillStyle = base; x.fillRect(0, 0, w, h);
+    if (kind === 'deep' || kind === 'lobby') {
+      x.strokeStyle = kind === 'deep' ? 'rgba(120,150,255,.16)' : 'rgba(226,174,74,.08)'; x.lineWidth = 2;
+      for (let i = 0; i <= 8; i++) { x.beginPath(); x.moveTo(i * 64, 0); x.lineTo(i * 64, h); x.stroke(); x.beginPath(); x.moveTo(0, i * 64); x.lineTo(w, i * 64); x.stroke(); }
+      for (let i = 0; i < 400; i++) { x.fillStyle = `rgba(255,255,255,${r() * 0.05})`; x.fillRect(r() * w, r() * h, 2, 2); }
+      return;
+    }
+    for (let i = 0; i < 14000; i++) {
+      const v = r() > 0.5 ? 255 : 0;
+      x.fillStyle = `rgba(${v},${v},${v},${0.03 + r() * 0.06})`;
+      x.fillRect(r() * w, r() * h, 1 + r() * 2, 1 + r() * 2);
+    }
+    const n = kind === 'moon' ? 34 : 10;
+    for (let i = 0; i < n; i++) {
+      const R = 4 + r() ** 2 * 46, cx = R + r() * (w - 2 * R), cy = R + r() * (h - 2 * R);
+      x.fillStyle = 'rgba(0,0,0,.13)'; x.beginPath(); x.arc(cx, cy, R, 0, 2 * PI); x.fill();
+      x.strokeStyle = 'rgba(255,255,255,.12)'; x.lineWidth = Math.max(1, R * 0.16); x.beginPath(); x.arc(cx - R * 0.08, cy - R * 0.08, R, PI * 0.9, PI * 1.9); x.stroke();
+    }
+    if (kind === 'mars') for (let i = 0; i < 160; i++) {
+      x.fillStyle = `rgba(40,15,8,${0.25 + r() * 0.3})`; x.beginPath(); x.ellipse(r() * w, r() * h, 2 + r() * 7, 2 + r() * 5, r() * PI, 0, 2 * PI); x.fill();
+    }
+  }, repeat);
+}
+
+function wallTex(zone, label) {
+  return canvasTex(512, 256, (x, w, h) => {
+    x.fillStyle = '#10141e'; x.fillRect(0, 0, w, h);
+    const g = x.createLinearGradient(0, 0, 0, h); g.addColorStop(0, 'rgba(255,255,255,.04)'); g.addColorStop(1, 'rgba(0,0,0,.2)');
+    x.fillStyle = g; x.fillRect(0, 0, w, h);
+    x.strokeStyle = 'rgba(0,0,0,.55)'; x.lineWidth = 3;
+    for (let i = 0; i <= 2; i++) { x.beginPath(); x.moveTo(i * 256, 0); x.lineTo(i * 256, h); x.stroke(); }
+    x.strokeStyle = 'rgba(255,255,255,.05)'; x.lineWidth = 1;
+    for (let i = 0; i <= 2; i++) { x.beginPath(); x.moveTo(i * 256 + 3, 0); x.lineTo(i * 256 + 3, h); x.stroke(); }
+    x.fillStyle = zone ? zone.css : '#e2ae4a'; x.globalAlpha = 0.35; x.fillRect(0, h * 0.62, w, 3); x.globalAlpha = 0.22;
+    x.font = `600 18px ${F_MONO}`; x.fillText(label, 24, h * 0.62 - 14); x.fillText(label, 280, h * 0.62 - 14);
+    x.globalAlpha = 1;
+  }, null);
+}
+
+function labelSprite(ex) {
+  const w = 1024, h = 300, zone = ex.z0;
+  const tex = canvasTex(w, h, (x) => {
+    x.fillStyle = 'rgba(8,11,18,0.82)'; roundRect(x, 6, 6, w - 12, h - 12, 28); x.fill();
+    x.strokeStyle = zone.css; x.globalAlpha = 0.5; x.lineWidth = 3; x.stroke(); x.globalAlpha = 1;
+    x.textBaseline = 'alphabetic';
+    x.font = `600 38px ${F_MONO}`; x.fillStyle = zone.css;
+    x.fillText(`${ex.num} · ${zone.name.toUpperCase()} · ${ex.year}`, 52, 88);
+    fitFont(x, ex.name, 700, F_DISP, 86, w - 104, 40);
+    x.fillStyle = '#ece8dd'; x.fillText(ex.name, 52, 192);
+    x.font = `500 38px ${F_BODY}`; x.fillStyle = STATUS_CSS[ex.status];
+    x.beginPath(); x.arc(64, 248, 11, 0, 2 * PI); x.fill();
+    x.fillText(STATUS[ex.status], 88, 261);
+  });
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  s.scale.set(3.3, 3.3 * h / w, 1);
+  return s;
+}
+
+function signTex(title, sub, color) {
+  return canvasTex(1024, 256, (x, w, h) => {
+    x.fillStyle = '#0b0f18'; x.fillRect(0, 0, w, h);
+    x.strokeStyle = color; x.globalAlpha = 0.6; x.lineWidth = 4; x.strokeRect(14, 14, w - 28, h - 28); x.globalAlpha = 1;
+    x.textAlign = 'center'; x.fillStyle = color;
+    fitFont(x, title, 700, F_DISP, 104, w - 120, 40);
+    x.fillText(title, w / 2, 140);
+    x.font = `600 30px ${F_MONO}`; x.fillStyle = '#9aa2b4';
+    x.fillText(sub, w / 2, 204);
+  });
+}
+
+/* ---------- hall ---------- */
+function buildHall() {
+  // lay out zones along -z; exhibits alternate left/right
+  let z = 0;
+  ZONES.forEach(zn => {
+    const list = EX.filter(e => e.zone === zn.id);
+    zn.zStart = z;
+    list.forEach((e, i) => { e.side = i % 2 === 0 ? -1 : 1; e.x = e.side * 6.2; e.z = zn.zStart - 7 - i * 4.5; });
+    zn.zEnd = zn.zStart - (14 + (list.length - 1) * 4.5);
+    zn.count = list.length;
+    z = zn.zEnd;
+  });
+  END_Z = z;
+
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(1400, 1400), new THREE.MeshStandardMaterial({ color: 0x07080c, roughness: 1 }));
+  ground.rotation.x = -PI / 2; ground.position.y = -0.02; scene.add(ground);
+
+  const floorPlane = (len, zMid, tex, rough) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(20, len), new THREE.MeshStandardMaterial({ map: tex, roughness: rough, metalness: 0.05 }));
+    m.rotation.x = -PI / 2; m.position.set(0, 0, zMid); scene.add(m);
+  };
+  const walls = (len, zMid, zone, label) => {
+    const tex = wallTex(zone, label); tex.wrapS = THREE.RepeatWrapping; tex.repeat.set(len / 5, 1);
+    const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, metalness: 0.3 });
+    const glow = new THREE.MeshBasicMaterial({ color: zone ? zone.hex : 0xe2ae4a });
+    for (const sx of [-1, 1]) {
+      box(0.4, 2.6, len, mat, sx * 10.2, 1.3, zMid, scene);
+      box(0.04, 0.04, len, glow, sx * 9.99, 0.14, zMid, scene);
+      box(0.05, 0.05, len, glow, sx * 10.0, 2.62, zMid, scene);
+    }
+  };
+  const runner = (len, zMid, color) => {
+    const tex = canvasTex(64, 256, (x, w, h) => {
+      x.fillStyle = '#0d1119'; x.fillRect(0, 0, w, h);
+      x.fillStyle = color; x.globalAlpha = 0.55; x.fillRect(w / 2 - 2, 20, 4, 110); x.globalAlpha = 1;
+    }, [1, len / 4]);
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(2.6, len), new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5, metalness: 0.3 }));
+    m.rotation.x = -PI / 2; m.position.set(0, 0.006, zMid); scene.add(m);
+  };
+
+  // lobby
+  floorPlane(START_Z, START_Z / 2, groundTex('lobby', [20 / 8, START_Z / 8]), 0.4);
+  walls(START_Z, START_Z / 2, null, 'ВЕСТИБЮЛЬ · NASA');
+  runner(START_Z, START_Z / 2, '#e2ae4a');
+
+  ZONES.forEach((zn, zi) => {
+    const len = zn.zStart - zn.zEnd, mid = (zn.zStart + zn.zEnd) / 2;
+    floorPlane(len, mid, groundTex(zn.id, [20 / 7, len / 7]), zn.id === 'deep' ? 0.35 : 0.95);
+    walls(len, mid, zn, `${zn.hall.toUpperCase()} · ${zn.name.toUpperCase()}`);
+    runner(len, mid, zn.css);
+    // gate
+    const pm = M.pedestal;
+    box(0.5, 4.8, 0.5, pm, -9.7, 2.4, zn.zStart, scene);
+    box(0.5, 4.8, 0.5, pm, 9.7, 2.4, zn.zStart, scene);
+    box(19.9, 1.4, 0.32, pm, 0, 4.6, zn.zStart, scene);
+    box(19.9, 0.06, 0.34, new THREE.MeshBasicMaterial({ color: zn.hex }), 0, 3.88, zn.zStart, scene);
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: signTex(zn.name, `${zn.hall.toUpperCase()} · ${zn.years} · ${zn.count} ЭКСП.`, zn.css) }));
+    front.position.set(0, 4.6, zn.zStart + 0.17); scene.add(front);
+    const prev = ZONES[zi - 1];
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(5.4, 1.35), new THREE.MeshBasicMaterial({ map: prev ? signTex('← ' + prev.name, `${prev.hall.toUpperCase()} · НАЗАД`, prev.css) : signTex('Вестибюль', 'ВЫХОД ИЗ ЭКСПОЗИЦИИ', '#e2ae4a') }));
+    back.position.set(0, 4.6, zn.zStart - 0.17); back.rotation.y = PI; scene.add(back);
+    const stripe = new THREE.Mesh(new THREE.PlaneGeometry(20, 0.14), new THREE.MeshBasicMaterial({ color: zn.hex }));
+    stripe.rotation.x = -PI / 2; stripe.position.set(0, 0.01, zn.zStart); scene.add(stripe);
+    // zone mood light
+    const pl = new THREE.PointLight({ moon: 0xe8ecff, mars: 0xff9a66, deep: 0x7f9cff }[zn.id], zn.id === 'moon' ? 0.5 : 0.8, len * 1.1, 1.6);
+    pl.position.set(0, 7, mid); scene.add(pl);
+  });
+
+  // end walls with posters
+  const endWall = (zPos, facing, tex) => {
+    box(20.8, 4.4, 0.4, M.pedestal, 0, 2.2, zPos, scene);
+    const p = new THREE.Mesh(new THREE.PlaneGeometry(9, 3.6), new THREE.MeshBasicMaterial({ map: tex }));
+    p.position.set(0, 2.15, zPos + facing * 0.21); if (facing < 0) p.rotation.y = PI; scene.add(p);
+  };
+  endWall(START_Z + 0.2, -1, canvasTex(1000, 400, (x, w, h) => {
+    x.fillStyle = '#0b0f18'; x.fillRect(0, 0, w, h);
+    x.font = `600 22px ${F_MONO}`; x.fillStyle = '#e2ae4a'; x.fillText('ВЕСТИБЮЛЬ · ДОБРО ПОЖАЛОВАТЬ', 56, 80);
+    x.fillStyle = '#ece8dd'; fitFont(x, 'Музей оставленных машин', 700, F_DISP, 58, w - 112, 30); x.fillText('Музей оставленных машин', 56, 160);
+    x.font = `400 26px ${F_BODY}`; x.fillStyle = '#c9c5ba';
+    wrapText(x, '15 аппаратов НАСА, которые остались на Луне, на Марсе и улетели за пределы Солнечной системы. Иди вперёд по золотой дорожке.', 56, 230, w - 112, 38);
+  }));
+  endWall(END_Z - 0.2, 1, canvasTex(1000, 400, (x, w, h) => {
+    x.fillStyle = '#020204'; x.fillRect(0, 0, w, h);
+    const bands = [[520, 'rgba(170,120,90,.22)'], [640, 'rgba(140,90,150,.16)'], [760, 'rgba(190,150,110,.2)']];
+    bands.forEach(([bx, c]) => { x.save(); x.translate(bx, 0); x.rotate(0.16); x.fillStyle = c; x.fillRect(-40, -60, 70, h + 120); x.restore(); });
+    x.fillStyle = '#cfe2ff'; x.beginPath(); x.arc(668, 250, 2.6, 0, 2 * PI); x.fill();
+    x.strokeStyle = 'rgba(207,226,255,.5)'; x.lineWidth = 1.5; x.beginPath(); x.arc(668, 250, 14, 0, 2 * PI); x.stroke();
+    x.font = `600 20px ${F_MONO}`; x.fillStyle = '#8fb2ff'; x.fillText('ВОЯДЖЕР-1 · 14 ФЕВРАЛЯ 1990 · 6 МЛРД КМ', 48, 70);
+    x.font = `700 40px ${F_DISP}`; x.fillStyle = '#ece8dd'; x.fillText('Бледная', 48, 150); x.fillText('голубая точка', 48, 200);
+    x.font = `400 23px ${F_BODY}`; x.fillStyle = '#c9c5ba';
+    wrapText(x, 'Крошечная точка в кружке — это Земля. Все люди, которых ты знаешь, живут здесь.', 48, 270, 400, 33);
+  }));
+
+  // exhibits
+  EX.forEach(ex => {
+    const root = new THREE.Group(); root.position.set(ex.x, 0, ex.z); scene.add(root);
+    const zc = ex.z0.hex;
+    let baseY;
+    if (ex.float) {
+      cyl(1.3, 1.5, 0.3, 40, M.pedestal, 0, 0.15, 0, root);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.15, 1.25, 64), new THREE.MeshBasicMaterial({ color: zc, side: THREE.DoubleSide }));
+      ring.rotation.x = -PI / 2; ring.position.y = 0.305; root.add(ring);
+      const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.0, 1.2, 4.2, 40, 1, true),
+        new THREE.MeshBasicMaterial({ color: zc, transparent: true, opacity: 0.07, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      beam.position.y = 2.4; root.add(beam);
+      baseY = 0.9;
+    } else {
+      cyl(1.6, 1.75, 0.5, 48, M.pedestal, 0, 0.25, 0, root);
+      const tt = groundTex(ex.zone, [1.6, 1.6]);
+      const top = new THREE.Mesh(new THREE.CircleGeometry(1.52, 48), new THREE.MeshStandardMaterial({ map: tt, roughness: 0.95 }));
+      top.rotation.x = -PI / 2; top.position.y = 0.502; root.add(top);
+      const ring = new THREE.Mesh(new THREE.RingGeometry(1.53, 1.6, 64), new THREE.MeshBasicMaterial({ color: zc }));
+      ring.rotation.x = -PI / 2; ring.position.y = 0.503; root.add(ring);
+      baseY = 0.5;
+    }
+    // aisle-side floor number
+    const numTex = canvasTex(256, 128, (x, w, h) => { x.fillStyle = ex.z0.css; x.font = `700 72px ${F_MONO}`; x.textAlign = 'center'; x.fillText(ex.num, w / 2, 92); });
+    const nm = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.45), new THREE.MeshBasicMaterial({ map: numTex, transparent: true, opacity: 0.8, depthWrite: false }));
+    nm.rotation.x = -PI / 2; nm.rotation.z = ex.side > 0 ? PI / 2 : -PI / 2; nm.position.set(-ex.side * 2.3, 0.012, 0); root.add(nm);
+
+    const model = ex.build();
+    model.updateMatrixWorld(true);
+    const bb = new THREE.Box3().setFromObject(model), sz = bb.getSize(V3(0, 0, 0));
+    model.scale.multiplyScalar(ex.size / Math.max(sz.x, sz.y, sz.z));
+    model.updateMatrixWorld(true);
+    bb.setFromObject(model);
+    const c = bb.getCenter(V3(0, 0, 0));
+    model.position.x -= c.x; model.position.z -= c.z; model.position.y -= bb.min.y;
+    const turn = new THREE.Group(); turn.position.y = baseY; turn.rotation.y = ex.i * 1.3; turn.add(model); root.add(turn);
+    const height = bb.max.y - bb.min.y;
+    const label = labelSprite(ex);
+    label.position.set(0, Math.min(baseY + height + 0.55, 4.7), 0); root.add(label);
+
+    ex.root = root; ex.turn = turn; ex.baseY = baseY; ex.tick = model.userData.tick;
+    root.traverse(o => { if (o.isMesh && o !== nm) { o.userData.ex = ex; pickMeshes.push(o); } });
+    label.userData.ex = ex; pickMeshes.push(label);
+  });
+
+  scene.add(new THREE.HemisphereLight(0xdfe6ff, 0x2a241c, 0.55));
+  const sun = new THREE.DirectionalLight(0xfff3e0, 1.35); sun.position.set(40, 60, 35); scene.add(sun);
+  const fill = new THREE.DirectionalLight(0x9fb4ff, 0.35); fill.position.set(-30, 20, -40); scene.add(fill);
+}
+
+function buildSky() {
+  const n = 5000, pos = new Float32Array(n * 3), col = new Float32Array(n * 3), r = rng(5);
+  for (let i = 0; i < n; i++) {
+    const u = r() * 2 - 1, t = r() * 2 * PI, s = Math.sqrt(1 - u * u), R = 700;
+    pos[i * 3] = s * Math.cos(t) * R; pos[i * 3 + 1] = Math.abs(u) * R * 0.9 + 10; pos[i * 3 + 2] = s * Math.sin(t) * R;
+    const k = 0.6 + r() * 0.4, warm = r();
+    col[i * 3] = k * (warm > 0.8 ? 1 : 0.85); col[i * 3 + 1] = k * 0.9; col[i * 3 + 2] = k * (warm < 0.2 ? 1 : 0.92);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({ size: 1.6, sizeAttenuation: false, vertexColors: true })));
+
+  const planet = (r0, x, y, z, draw) => {
+    const t = canvasTex(512, 256, draw);
+    const m = new THREE.Mesh(new THREE.SphereGeometry(r0, 48, 24), new THREE.MeshStandardMaterial({ map: t, roughness: 1, metalness: 0, emissive: 0xffffff, emissiveMap: t, emissiveIntensity: 0.12 }));
+    m.position.set(x, y, z); scene.add(m); return m;
+  };
+  const blobs = (x, n, color, rx, ry, seed, w, h) => { const r2 = rng(seed); x.fillStyle = color; for (let i = 0; i < n; i++) { x.beginPath(); x.ellipse(r2() * w, h * 0.15 + r2() * h * 0.7, 6 + r2() * rx, 4 + r2() * ry, r2() * PI, 0, 2 * PI); x.fill(); } };
+  const earth = planet(16, -95, 48, -6, (x, w, h) => {
+    x.fillStyle = '#1d4f91'; x.fillRect(0, 0, w, h);
+    blobs(x, 40, 'rgba(70,120,60,.85)', 40, 22, 3, w, h); blobs(x, 18, 'rgba(150,130,80,.7)', 26, 14, 9, w, h);
+    blobs(x, 70, 'rgba(255,255,255,.38)', 40, 8, 17, w, h);
+    x.fillStyle = 'rgba(255,255,255,.85)'; x.fillRect(0, 0, w, 14); x.fillRect(0, h - 14, w, 14);
+  });
+  earth.rotation.z = 0.4;
+  planet(12, 105, 38, -52, (x, w, h) => {
+    x.fillStyle = '#b4552f'; x.fillRect(0, 0, w, h);
+    blobs(x, 30, 'rgba(90,35,20,.55)', 40, 18, 4, w, h); blobs(x, 30, 'rgba(220,140,90,.3)', 30, 12, 8, w, h);
+    x.fillStyle = 'rgba(255,255,255,.8)'; x.fillRect(0, 0, w, 12);
+  });
+  planet(20, 120, 70, -120, (x, w, h) => {
+    const bands = ['#d8c3a0', '#b08a63', '#e7dcc8', '#9c6b48', '#e3cfae', '#c09a74'];
+    for (let i = 0; i < 16; i++) { x.fillStyle = bands[i % bands.length]; x.fillRect(0, i * h / 16, w, h / 16 + 1); }
+    x.fillStyle = '#b5543a'; x.beginPath(); x.ellipse(w * 0.62, h * 0.64, 26, 12, 0, 0, 2 * PI); x.fill();
+  });
+  const sat = planet(14, -125, 62, -112, (x, w, h) => {
+    const bands = ['#e3d3a8', '#cdb98a', '#efe2bf', '#d8c595'];
+    for (let i = 0; i < 12; i++) { x.fillStyle = bands[i % bands.length]; x.fillRect(0, i * h / 12, w, h / 12 + 1); }
+  });
+  const ring = new THREE.Mesh(new THREE.RingGeometry(14 * 1.3, 14 * 2.3, 96), new THREE.MeshBasicMaterial({ color: 0xcbb88f, transparent: true, opacity: 0.55, side: THREE.DoubleSide }));
+  ring.position.copy(sat.position); ring.rotation.x = -PI / 2 + 0.45; ring.rotation.y = 0.3; scene.add(ring);
+  const sunTex = canvasTex(256, 256, (x, w, h) => {
+    const g2 = x.createRadialGradient(128, 128, 0, 128, 128, 128);
+    g2.addColorStop(0, 'rgba(255,255,245,1)'); g2.addColorStop(0.2, 'rgba(255,230,170,.9)'); g2.addColorStop(0.5, 'rgba(255,170,80,.25)'); g2.addColorStop(1, 'rgba(255,150,60,0)');
+    x.fillStyle = g2; x.fillRect(0, 0, w, h);
+  });
+  const sun = new THREE.Sprite(new THREE.SpriteMaterial({ map: sunTex, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
+  sun.position.set(300, 360, 260); sun.scale.set(110, 110, 1); scene.add(sun);
+}
+
+/* ---------- player & input ---------- */
+const player = { x: 0, z: 5.5, yaw: 0, pitch: -0.04, vx: 0, vz: 0, bob: 0 };
+const keys = new Set();
+const joyVec = { x: 0, y: 0 };
+let tween = null, uiOpen = false, started = false;
+
+addEventListener('keydown', e => {
+  if (e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName)) return;
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) e.preventDefault();
+  keys.add(e.code);
+  if (e.code === 'Escape') { closeSheets(); if (!started) enter(); }
+  if (e.code === 'KeyE' && started && nearest && $('#card').hidden) openCard(nearest);
+  if (e.code === 'KeyK' && started) toggleCatalog();
+  if (e.code === 'Enter' && !started && THREE_OK) enter();
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+
+const cv = $('#c');
+let look = null;
+cv.addEventListener('pointerdown', e => {
+  if (!started) return;
+  if (look) return;
+  look = { id: e.pointerId, x: e.clientX, y: e.clientY, sx: e.clientX, sy: e.clientY, t: performance.now() };
+  try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  cv.classList.add('dragging');
+});
+cv.addEventListener('pointermove', e => {
+  if (look && e.pointerId === look.id) {
+    const k = e.pointerType === 'touch' ? 0.006 : 0.0042;
+    player.yaw -= (e.clientX - look.x) * k;
+    player.pitch = Math.max(-1.1, Math.min(1.1, player.pitch - (e.clientY - look.y) * k * 0.85));
+    look.x = e.clientX; look.y = e.clientY;
+    tween = null;
+  } else if (!look && e.pointerType === 'mouse' && started) {
+    const hit = pick(e.clientX, e.clientY);
+    cv.classList.toggle('hovering', !!hit);
+  }
+});
+const endLook = e => {
+  if (!look || e.pointerId !== look.id) return;
+  const moved = Math.hypot(e.clientX - look.sx, e.clientY - look.sy);
+  if (moved < 7 && performance.now() - look.t < 500) { const ex = pick(e.clientX, e.clientY); if (ex) openCard(ex); }
+  look = null; cv.classList.remove('dragging');
+};
+cv.addEventListener('pointerup', endLook);
+cv.addEventListener('pointercancel', endLook);
+
+const ray = THREE_OK ? new THREE.Raycaster() : null;
+function pick(cx, cy) {
+  const r = cv.getBoundingClientRect();
+  ray.setFromCamera(new THREE.Vector2((cx - r.left) / r.width * 2 - 1, -((cy - r.top) / r.height) * 2 + 1), camera);
+  ray.far = 22;
+  const hits = ray.intersectObjects(pickMeshes, false);
+  return hits.length ? hits[0].object.userData.ex : null;
+}
+
+// touch joystick
+const joy = $('#joy');
+if (isTouch && THREE_OK) {
+  let jid = null;
+  const knob = joy.querySelector('i');
+  const setJoy = e => {
+    const r = joy.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    let dx = e.clientX - cx, dy = e.clientY - cy; const d = Math.hypot(dx, dy), max = 44;
+    if (d > max) { dx *= max / d; dy *= max / d; }
+    joyVec.x = dx / max; joyVec.y = dy / max;
+    knob.style.transform = `translate(${dx}px,${dy}px)`;
+  };
+  joy.addEventListener('pointerdown', e => { jid = e.pointerId; try { joy.setPointerCapture(jid); } catch (err) {} setJoy(e); tween = null; });
+  joy.addEventListener('pointermove', e => { if (e.pointerId === jid) setJoy(e); });
+  const rel = e => { if (e.pointerId !== jid) return; jid = null; joyVec.x = joyVec.y = 0; knob.style.transform = ''; };
+  joy.addEventListener('pointerup', rel); joy.addEventListener('pointercancel', rel);
+}
+
+function collide(px, pz) {
+  px = Math.max(-9.35, Math.min(9.35, px));
+  pz = Math.max(END_Z + 0.9, Math.min(START_Z - 0.6, pz));
+  for (const ex of EX) {
+    const dx = px - ex.x, dz = pz - ex.z, d = Math.hypot(dx, dz), min = (ex.float ? 1.5 : 1.75) + 0.45;
+    if (d < min && d > 1e-4) { px = ex.x + dx / d * min; pz = ex.z + dz / d * min; }
+  }
+  return [px, pz];
+}
+
+function goTo(ex, open) {
+  const sx = ex.x - ex.side * 3.7, sz = ex.z + 0.4;
+  let yaw = Math.atan2(-(ex.x - sx), -(ex.z - sz));
+  if (open && innerWidth > 640) yaw -= 0.34;
+  if (open && innerWidth <= 640) { /* card covers the lower part; look slightly down so the model sits higher */ }
+  let dy = yaw - player.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+  tween = { fx: player.x, fz: player.z, fyaw: player.yaw, fp: player.pitch, tx: sx, tz: sz, tyaw: player.yaw + dy, tp: innerWidth <= 640 && open ? -0.32 : 0.06, t: 0,
+    dur: Math.min(2.2, 0.6 + Math.hypot(sx - player.x, sz - player.z) / 40) };
+  player.vx = player.vz = 0;
+}
+
+/* ---------- UI: cards, catalog ---------- */
+const card = $('#card'), cardBody = $('#cardBody'), catalog = $('#catalog');
+let currentEx = null;
+
+function esc(s) { return String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function openCard(ex) {
+  currentEx = ex;
+  catalog.hidden = true;
+  const prev = EX[(ex.i - 1 + EX.length) % EX.length], next = EX[(ex.i + 1) % EX.length];
+  cardBody.style.setProperty('--zc', ex.z0.css);
+  cardBody.innerHTML = `
+    <div class="head">
+      <div class="eyebrow" style="color:${ex.z0.css}">Экспонат ${ex.num} · ${esc(ex.z0.name)}</div>
+      <button class="x" type="button" data-close aria-label="Закрыть карточку">×</button>
+    </div>
+    <h2>${esc(ex.name)}</h2>
+    <p class="en">${esc(ex.en)}</p>
+    <span class="status st-${ex.status}">${STATUS[ex.status]}</span>
+    <dl class="facts">
+      <div><dt>Запуск</dt><dd>${esc(ex.launch)}</dd></div>
+      <div><dt>Где сейчас</dt><dd>${esc(ex.where)}</dd></div>
+      <div><dt>Масса и размер</dt><dd>${esc(ex.mass)}</dd></div>
+      <div><dt>Состояние</dt><dd>${esc(ex.statusText)}</dd></div>
+    </dl>
+    <p class="story">${esc(ex.story)}</p>
+    <h3>Что мы узнали благодаря ему</h3>
+    <ul class="learned">${ex.learned.map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+    <div class="didyou"><b>А ты знал?</b><p>${esc(ex.fact)}</p></div>
+    <div class="nav">
+      <button type="button" data-go="${prev.i}"><small>← Предыдущий</small><span>${esc(prev.name)}</span></button>
+      <button type="button" class="next" data-go="${next.i}"><small>Следующий →</small><span>${esc(next.name)}</span></button>
+    </div>`;
+  card.hidden = false;
+  card.scrollTop = 0;
+  uiOpen = true;
+  const was = visited.has(ex.id);
+  visited.add(ex.id);
+  try { localStorage.setItem('nasa-museum-visited', JSON.stringify([...visited])); } catch (e) {}
+  renderPassport(); renderCatalog();
+  if (!was && visited.size === EX.length) toast('<b>Паспорт заполнен!</b> Ты изучил все 15 аппаратов. Теперь ты знаешь о машинах НАСА больше, чем многие взрослые.');
+  try { history.replaceState(null, '', '#' + ex.id); } catch (e) {}
+}
+cardBody.addEventListener('click', e => {
+  const b = e.target.closest('[data-go]');
+  if (b) { const ex = EX[+b.dataset.go]; if (THREE_OK) goTo(ex, true); openCard(ex); }
+});
+document.addEventListener('click', e => { if (e.target.closest('[data-close]')) closeSheets(); });
+
+function closeSheets() {
+  card.hidden = true; catalog.hidden = true; uiOpen = false; currentEx = null;
+  try { history.replaceState(null, '', location.pathname + location.search); } catch (e) {}
+  if (THREE_OK) cv.focus({ preventScroll: true });
+}
+
+function renderCatalog() {
+  $('#catBody').innerHTML = ZONES.map(zn => `
+    <section class="cat-zone">
+      <h4 style="color:${zn.css}">${zn.hall}. ${zn.name} <span>${zn.years}</span></h4>
+      <ul class="cat-list">${EX.filter(e => e.zone === zn.id).map(e => `
+        <li><button type="button" data-cat="${e.i}">
+          <span class="num">${e.num}</span>
+          <span class="cat-name">${esc(e.name)}<small style="color:${STATUS_CSS[e.status]}"><span class="dot"></span>${STATUS[e.status]} · ${e.year}</small></span>
+          <span class="seen">${visited.has(e.id) ? 'изучен ✓' : ''}</span>
+        </button></li>`).join('')}
+      </ul>
+    </section>`).join('');
+}
+renderCatalog();
+$('#catBody').addEventListener('click', e => {
+  const b = e.target.closest('[data-cat]'); if (!b) return;
+  const ex = EX[+b.dataset.cat];
+  if (!started && THREE_OK) enter(true);
+  if (THREE_OK) goTo(ex, true);
+  openCard(ex);
+});
+function toggleCatalog() {
+  if (!catalog.hidden) { closeSheets(); return; }
+  card.hidden = true; catalog.hidden = false; catalog.scrollTop = 0; uiOpen = true;
+}
+$('#btnCatalog').addEventListener('click', toggleCatalog);
+$('#btnHelp').addEventListener('click', () => { closeSheets(); $('#intro').hidden = false; started = false; $('#btnEnter').textContent = 'Продолжить'; $('#btnEnter').focus(); });
+
+let toastTimer;
+function toast(html) { const t = $('#toast'); t.innerHTML = html; t.hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.hidden = true, 6500); }
+
+function enter(silent) {
+  $('#intro').hidden = true; started = true;
+  if (isTouch) joy.hidden = false;
+  if (!silent) cv.focus({ preventScroll: true });
+}
+$('#btnEnter').addEventListener('click', () => {
+  if (THREE_OK) enter();
+  else { $('#intro').hidden = true; toggleCatalog(); }
+});
+
+/* ---------- HUD state ---------- */
+const prompt = $('#prompt'), zoneChip = $('#zoneChip');
+let nearest = null, lastZone = '';
+prompt.addEventListener('click', () => { if (nearest) openCard(nearest); });
+function updateHud() {
+  let zn = ZONES.find(z => player.z <= z.zStart && player.z > z.zEnd);
+  const label = zn ? `${zn.hall} · ${zn.name}` : 'Вестибюль';
+  if (label !== lastZone) {
+    lastZone = label;
+    zoneChip.style.setProperty('--zc', zn ? zn.css : 'var(--foil)');
+    zoneChip.querySelector('span').textContent = label;
+  }
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+  let best = null, bd = 5.2;
+  for (const ex of EX) {
+    const dx = ex.x - player.x, dz = ex.z - player.z, d = Math.hypot(dx, dz);
+    if (d < bd && (dx * fx + dz * fz) / d > 0.35) { bd = d; best = ex; }
+  }
+  nearest = best;
+  const show = !!best && card.hidden && catalog.hidden && started;
+  if (prompt.hidden === show) prompt.hidden = !show;
+  if (show && best !== shownEx) {
+    shownEx = best;
+    prompt.style.setProperty('--pc', best.z0.css);
+    prompt.querySelector('.nm').textContent = best.name;
+    prompt.querySelector('.hint').innerHTML = isTouch ? '· открыть карточку' : '· открыть <kbd>E</kbd>';
+  }
+}
+let shownEx = null;
+
+/* ---------- main loop ---------- */
+function frame() {
+  const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
+  if (tween) {
+    tween.t += dt / tween.dur;
+    const k = tween.t >= 1 ? 1 : 1 - Math.pow(1 - tween.t, 3);
+    player.x = tween.fx + (tween.tx - tween.fx) * k; player.z = tween.fz + (tween.tz - tween.fz) * k;
+    player.yaw = tween.fyaw + (tween.tyaw - tween.fyaw) * k; player.pitch = tween.fp + (tween.tp - tween.fp) * k;
+    if (tween.t >= 1) tween = null;
+  } else if (started) {
+    let ix = 0, iz = 0;
+    if (keys.has('KeyW') || keys.has('ArrowUp')) iz += 1;
+    if (keys.has('KeyS') || keys.has('ArrowDown')) iz -= 1;
+    if (keys.has('KeyA')) ix -= 1;
+    if (keys.has('KeyD')) ix += 1;
+    if (keys.has('ArrowLeft')) player.yaw += 1.9 * dt;
+    if (keys.has('ArrowRight')) player.yaw -= 1.9 * dt;
+    ix += joyVec.x; iz -= joyVec.y;
+    const len = Math.hypot(ix, iz); if (len > 1) { ix /= len; iz /= len; }
+    const speed = (keys.has('ShiftLeft') || keys.has('ShiftRight')) ? 7 : 3.6;
+    const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw), rx = Math.cos(player.yaw), rz = -Math.sin(player.yaw);
+    const tvx = (fx * iz + rx * ix) * speed, tvz = (fz * iz + rz * ix) * speed;
+    const a = 1 - Math.exp(-dt * 10);
+    player.vx += (tvx - player.vx) * a; player.vz += (tvz - player.vz) * a;
+    [player.x, player.z] = collide(player.x + player.vx * dt, player.z + player.vz * dt);
+    if (!reduceMotion) player.bob += Math.hypot(player.vx, player.vz) * dt * 2.2;
+  }
+  const bob = reduceMotion ? 0 : Math.sin(player.bob) * 0.035;
+  camera.position.set(player.x, 1.65 + bob, player.z);
+  camera.rotation.set(player.pitch, player.yaw, 0);
+
+  for (const ex of EX) {
+    if (Math.abs(ex.z - player.z) > 45) continue;
+    ex.turn.rotation.y += dt * (reduceMotion ? 0.05 : 0.22);
+    if (ex.float && !reduceMotion) ex.turn.position.y = ex.baseY + Math.sin(t * 0.8 + ex.i) * 0.09;
+    if (ex.tick) ex.tick(t, dt);
+  }
+  updateHud();
+  renderer.render(scene, camera);
+  requestAnimationFrame(frame);
+}
+
+if (THREE_OK) {
+  requestAnimationFrame(frame);
+  const id = (location.hash || '').slice(1);
+  const ex = EX.find(e => e.id === id);
+  if (ex) { enter(true); player.x = ex.x - ex.side * 3.7; player.z = ex.z + 6; goTo(ex, true); openCard(ex); }
+}
+$('#btnEnter').focus({ preventScroll: true });
+})();
